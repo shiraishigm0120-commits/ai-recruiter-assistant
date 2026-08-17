@@ -67,6 +67,8 @@
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:200;opacity:0;transition:.3s}
   .toast.show{opacity:1}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -92,9 +94,14 @@
   <div class="card">
     <div class="label">岗位 JD</div>
     <textarea id="jd-input" placeholder="粘贴岗位 JD，例如：AIGC视频生成师，负责AI漫剧的抽卡、提示词生成、精修AI素材、粗剪…"></textarea>
-    <div class="label">候选人简历（多份用 ===== 分隔）</div>
+    <div class="label">候选人简历（可粘贴，或直接上传文件）</div>
     <textarea id="resume-input" placeholder="粘贴多份简历，每份之间用一行 ===== 分隔&#10;=====&#10;姓名：张三&#10;5年AIGC抽卡经验…" style="min-height:180px"></textarea>
-    <div class="hint">支持 .txt 文本粘贴。真实产品可扩展文件上传。</div>
+    <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" multiple style="display:none" onchange="handleFiles(this.files)">
+    <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+      <button type="button" class="btn-ghost btn-sm" onclick="document.getElementById('file-input').click()">📎 上传 PDF / 图片简历</button>
+      <span class="hint" id="file-status" style="margin:0"></span>
+    </div>
+    <div class="hint">PDF 直接解析文字；图片走 OCR（中文可能有错字，建议优先 PDF）。</div>
   </div>
   <button class="btn-primary" style="width:100%;padding:13px" onclick="startMatch()">开始匹配</button>
 </div>
@@ -194,6 +201,49 @@ function parseResumes(text){
     if(m) name = m[1].trim();
     return { name, text:r };
   });
+}
+
+/* ===== 文件上传（PDF/图片） ===== */
+async function handleFiles(files){
+  if(!files || files.length===0) return;
+  const status = $('file-status');
+  const texts = [];
+  for(let i=0;i<files.length;i++){
+    const f = files[i];
+    status.textContent = '正在解析 '+f.name+'…';
+    try{
+      const isPdf = f.name.toLowerCase().endsWith('.pdf');
+      const text = isPdf ? await extractPdfText(f) : await extractImageText(f);
+      if(text.trim()) texts.push(text.trim());
+    }catch(e){
+      status.textContent = f.name+' 解析失败，已跳过';
+    }
+  }
+  if(texts.length){
+    const cur = $('resume-input').value.trim();
+    const sep = cur ? '\n=====\n' : '';
+    $('resume-input').value = cur + sep + texts.join('\n=====\n');
+    status.textContent = '已提取 '+texts.length+' 份简历';
+  } else {
+    status.textContent = '没有提取到文字';
+  }
+}
+async function extractPdfText(file){
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  let text = '';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    text += tc.items.map(it=>it.str).join(' ') + '\n';
+  }
+  return text;
+}
+async function extractImageText(file){
+  const result = await Tesseract.recognize(file, 'chi_sim+eng');
+  return result.data.text;
 }
 
 /* ===== 开始匹配 ===== */
