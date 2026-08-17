@@ -85,6 +85,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
 
@@ -140,10 +141,10 @@
   <div class="card">
     <div class="label" style="margin-top:0">粘贴简历（Ctrl+V 直接粘贴文字或截图）</div>
     <textarea id="resume-input" placeholder="直接 Ctrl+V 粘贴简历文字或截图；多份文字用一行 ===== 分隔"></textarea>
-    <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" multiple style="display:none" onchange="handleFiles(this.files)">
+    <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg" multiple style="display:none" onchange="handleFiles(this.files)">
     <div class="upload-zone" onclick="document.getElementById('file-input').click()">
       <div style="font-size:24px">📎</div>
-      <div>点击上传简历文件（PDF / 图片，可多选）</div>
+      <div>点击上传简历文件（PDF / Word / 图片 / 文本，可多选）</div>
       <div class="hint" style="margin:0">每份文件 = 一位候选人，原样保留</div>
     </div>
     <div id="file-list"></div>
@@ -393,8 +394,7 @@ async function handleFiles(files){
     renderFileList();
     try{
       item.dataUrl = await readFileAsDataUrl(f);
-      const isPdf = f.name && f.name.toLowerCase().endsWith('.pdf');
-      item.text = isPdf ? await extractPdfText(f) : await extractImageText(f);
+      item.text = await extractTextByType(f);
       item.status = item.text.trim() ? 'ok' : 'empty';
     }catch(e){
       item.status = 'err';
@@ -406,7 +406,8 @@ function renderFileList(){
   const box = $('file-list');
   if(!uploadedFiles.length){ box.innerHTML=''; return; }
   box.innerHTML = uploadedFiles.map((f,i)=>{
-    const icon = (f.name||'').toLowerCase().endsWith('.pdf') ? '📄' : '🖼️';
+    const n = (f.name||'').toLowerCase();
+    const icon = n.endsWith('.pdf') ? '📄' : n.endsWith('.docx') ? '📝' : (n.endsWith('.txt')||n.endsWith('.md')) ? '📃' : '🖼️';
     let statusHtml = '';
     if(f.status==='parsing') statusHtml = '<span class="fc-status">解析中…</span>';
     else if(f.status==='ok') statusHtml = '<span class="fc-status ok">✓ 已就绪</span>';
@@ -447,6 +448,22 @@ async function extractPdfText(file){
 async function extractImageText(file){
   const result = await Tesseract.recognize(file, 'chi_sim+eng');
   return result.data.text;
+}
+async function extractDocxText(file){
+  const buf = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({arrayBuffer: buf});
+  return result.value || '';
+}
+async function extractTxtText(file){
+  return await file.text();
+}
+async function extractTextByType(file){
+  const name = (file.name||'').toLowerCase();
+  if(name.endsWith('.pdf')) return await extractPdfText(file);
+  if(name.endsWith('.docx')) return await extractDocxText(file);
+  if(name.endsWith('.txt') || name.endsWith('.md')) return await extractTxtText(file);
+  if(/\.(png|jpe?g|gif|webp|bmp)$/.test(name)) return await extractImageText(file);
+  return await file.text();
 }
 
 /* ===== 开始匹配 ===== */
@@ -539,11 +556,11 @@ function candCard(r, idx){
     '</div>';
 }
 function rawPreview(r){
-  if(r.dataUrl){
-    if(r.fileType === 'application/pdf'){
-      return '<div class="raw-preview">📄 PDF 简历文件</div>';
-    }
+  if(r.dataUrl && r.fileType && r.fileType.indexOf('image')===0){
     return '<div class="raw-preview"><img src="'+r.dataUrl+'" alt="简历截图"></div>';
+  }
+  if(r.dataUrl && r.fileType === 'application/pdf'){
+    return '<div class="raw-preview">📄 PDF 简历文件</div>';
   }
   const txt = (r.text||'').trim();
   if(!txt) return '';
@@ -566,15 +583,16 @@ function openDetail(idx){
   $('d-missing').innerHTML = r.missing.map(s=>'<span class="gap-tag">缺：'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无明显缺口</span>';
   $('d-comment').textContent = r.comment;
   const resumeBox = $('d-resume');
-  if(r.dataUrl){
+  if(r.dataUrl && r.fileType && r.fileType.indexOf('image')===0){
     resumeBox.style.maxHeight = 'none';
     resumeBox.style.whiteSpace = 'normal';
     resumeBox.style.padding = '0';
-    if(r.fileType === 'application/pdf'){
-      resumeBox.innerHTML = '<iframe src="'+r.dataUrl+'" style="width:100%;height:420px;border:none;border-radius:8px"></iframe>';
-    } else {
-      resumeBox.innerHTML = '<img src="'+r.dataUrl+'" style="max-width:100%;display:block;border-radius:8px">';
-    }
+    resumeBox.innerHTML = '<img src="'+r.dataUrl+'" style="max-width:100%;display:block;border-radius:8px">';
+  } else if(r.dataUrl && r.fileType === 'application/pdf'){
+    resumeBox.style.maxHeight = 'none';
+    resumeBox.style.whiteSpace = 'normal';
+    resumeBox.style.padding = '0';
+    resumeBox.innerHTML = '<iframe src="'+r.dataUrl+'" style="width:100%;height:420px;border:none;border-radius:8px"></iframe>';
   } else {
     resumeBox.style.maxHeight = '400px';
     resumeBox.style.whiteSpace = 'pre-wrap';
