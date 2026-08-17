@@ -359,11 +359,26 @@ function openBatch(jobId, batchId){
 }
 
 /* ===== 简历解析 ===== */
+const FIELD_WORDS = ['简历','求职','个人简历','个人','基本','基本资料','基本信息','教育','教育经历','工作','工作经历','项目','项目经历','技能','技能特长','自我','自我评价','联系','联系方式','应聘','应聘岗位','期望','期望职位','求职意向','兴趣','兴趣爱好'];
+function extractName(text){
+  // 显式「姓名」字段
+  let m = text.match(/姓\s*名\s*[:：|｜]\s*([一-龥]{2,4})/);
+  if(m) return m[1];
+  m = text.match(/姓\s*名\s*[ 　\t]+([一-龥]{2,4})/);
+  if(m) return m[1];
+  // 顶格纯汉字（2-4 字），排除字段标题
+  const lines = (text||'').split('\n').map(s=>s.trim()).filter(s=>s && s.length<=12).slice(0,8);
+  for(const line of lines){
+    const clean = line.replace(/[【】\[\]（）()·•\s]/g,'');
+    if(/^[一-龥]{2,4}$/.test(clean) && !FIELD_WORDS.includes(clean)){
+      return clean;
+    }
+  }
+  return '';
+}
 function parseResumes(text){
   return text.split(/=+\s*/).map(s=>s.trim()).filter(Boolean).map((r,i)=>{
-    let name = '候选人'+(i+1);
-    const m = r.match(/姓名[:：]\s*([^\n]+)/);
-    if(m) name = m[1].trim();
+    const name = extractName(r) || ('候选人'+(i+1));
     return { name, text:r };
   });
 }
@@ -442,9 +457,7 @@ async function startMatch(){
   const resumes = [];
   uploadedFiles.forEach(f=>{
     if(!f.text.trim()) return;
-    let name = (f.name||'截图').replace(/\.(pdf|png|jpe?g)$/i,'');
-    const m = f.text.match(/姓名[:：]\s*([^\n]+)/);
-    if(m) name = m[1].trim();
+    const name = extractName(f.text) || (f.name||'截图').replace(/\.(pdf|png|jpe?g)$/i,'');
     resumes.push({ name, text:f.text, dataUrl:f.dataUrl, fileType:f.type });
   });
   parseResumes(pastedText).forEach(r=>resumes.push(r));
@@ -491,6 +504,7 @@ async function startMatch(){
   const idx = jobs.findIndex(j=>j.id===job.id);
   if(idx>=0){ jobs[idx] = job; saveJobs(jobs); }
 
+  $('res-count').textContent = '共 '+state.results.length+' 份简历 · '+(mode==='演示'?'演示模式（关键词粗筛，建议配置 DeepSeek）':'DeepSeek 模式');
   renderResults();
   toast('匹配完成（'+mode+'模式）');
 }
@@ -620,12 +634,14 @@ function buildPrompt(jd, resumes){
 }
 
 /* ===== 演示模式（mock，通用岗位） ===== */
+const STOP_WORDS = ['负责','岗位','职责','任职','要求','经验','优先','熟悉','掌握','了解','具备','能力','相关','专业','本科','大专','以上','工作','团队','沟通','协作','良好','优秀','一定','较强','具有','从事','参与','完成','进行','以及','或者','等','公司','行业','背景','学历','学位','技能','要求','条件','任职','资格','内容','方向','等','的','和','及','有','与','为','对','在','中','上','下','会','能','可','需要','负责','相关','能力','经验','优先','加分','我们希望','你将'];
 function extractKeywords(text){
   const parts = text.split(/[\s,，。；;、:：/\\|()（）\[\]【】<>《》"“”'‘’\-—\n]+/)
     .map(s=>s.trim())
     .filter(s=>s.length>=2 && s.length<=12)
-    .filter(s=>!/^\d+$/.test(s));
-  return [...new Set(parts)].slice(0,20);
+    .filter(s=>!/^\d+$/.test(s))
+    .filter(s=>!STOP_WORDS.includes(s));
+  return [...new Set(parts)].slice(0,30);
 }
 function mockScore(resume, jdText){
   const tokens = extractKeywords(jdText);
