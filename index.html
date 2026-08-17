@@ -123,8 +123,18 @@
   <div class="sub" id="job-date" style="margin-bottom:16px"></div>
 
   <div class="card">
-    <div class="label" style="margin-top:0">岗位 JD</div>
+    <div class="label" style="margin-top:0;display:flex;justify-content:space-between;align-items:center">
+      <span>岗位 JD</span>
+      <button class="btn-ghost btn-sm" onclick="toggleEditJd()">编辑</button>
+    </div>
     <div class="resume-box" id="job-jd-view"></div>
+    <div id="jd-edit-box" style="display:none">
+      <textarea id="job-jd-edit" style="margin-top:8px"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-primary btn-sm" onclick="saveJd()">保存</button>
+        <button class="btn-ghost btn-sm" onclick="toggleEditJd(false)">取消</button>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -205,7 +215,13 @@ let uploadedFiles = [];
 
 /* ===== 岗位数据 ===== */
 function loadJobs(){ return JSON.parse(localStorage.getItem('jobs')||'[]'); }
-function saveJobs(jobs){ localStorage.setItem('jobs', JSON.stringify(jobs)); }
+function saveJobs(jobs){
+  try{
+    localStorage.setItem('jobs', JSON.stringify(jobs));
+  }catch(e){
+    toast('存储空间不足，最早的历史记录可能未保存');
+  }
+}
 function getJob(id){ return loadJobs().find(j=>j.id===id); }
 function uid(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function fmtDate(ts){
@@ -244,7 +260,10 @@ function renderJobs(){
     return '<div class="job-card" onclick="openJob(\''+j.id+'\')">'+
       '<div class="task-info"><div class="job-name">'+escapeHtml(j.name)+'</div>'+
       '<div class="job-meta">'+fmtDate(j.createdAt)+' 创建 · '+n+' 次筛选</div></div>'+
-      '<span class="hint" style="margin:0">进入 →</span></div>';
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span class="hint" style="margin:0">进入 →</span>'+
+        '<button class="btn-ghost btn-sm" onclick="event.stopPropagation();delJob(\''+j.id+'\')">删除</button>'+
+      '</div></div>';
   }).join('');
 }
 
@@ -262,6 +281,14 @@ function createJob(){
   openJob(job.id);
   toast('岗位已保存');
 }
+function delJob(id){
+  if(!confirm('确定删除这个岗位及它的所有筛选记录？')) return;
+  let jobs = loadJobs();
+  jobs = jobs.filter(j=>j.id!==id);
+  saveJobs(jobs);
+  renderJobs();
+  toast('岗位已删除');
+}
 
 /* ===== 打开岗位（每次进入清空简历） ===== */
 function openJob(id){
@@ -276,10 +303,31 @@ function openJob(id){
   $('job-title').textContent = job.name;
   $('job-date').textContent = '创建于 '+fmtDate(job.createdAt);
   $('job-jd-view').textContent = job.jd;
+  toggleEditJd(false);
   renderHistory(job);
   showPage('job');
 }
 
+function toggleEditJd(show){
+  const editing = $('jd-edit-box').style.display !== 'none';
+  if(show === undefined) show = !editing;
+  $('job-jd-view').style.display = show ? 'none' : 'block';
+  $('jd-edit-box').style.display = show ? 'block' : 'none';
+  if(show) $('job-jd-edit').value = $('job-jd-view').textContent;
+}
+function saveJd(){
+  const job = getJob(state.currentJobId);
+  if(!job) return;
+  const jd = $('job-jd-edit').value.trim();
+  if(!jd){ toast('JD 不能为空'); return; }
+  job.jd = jd;
+  const jobs = loadJobs();
+  const idx = jobs.findIndex(j=>j.id===job.id);
+  if(idx>=0){ jobs[idx]=job; saveJobs(jobs); }
+  $('job-jd-view').textContent = jd;
+  toggleEditJd(false);
+  toast('JD 已更新');
+}
 function renderHistory(job){
   const box = $('history-list');
   const batches = job.batches || [];
@@ -428,10 +476,17 @@ async function startMatch(){
     };
   }).sort((a,b)=>b.score-a.score);
 
-  // 保存为新的筛选批次
-  const batch = { id:uid(), createdAt:Date.now(), results: state.results };
+  // 保存为新的筛选批次（不存原图/原文件 base64，避免撑爆本地存储）
+  const batch = {
+    id:uid(), createdAt:Date.now(),
+    results: state.results.map(r=>({
+      name: r.name, score: r.score, covered: r.covered, missing: r.missing,
+      comment: r.comment, text: (r.text||'').slice(0,2000), fileType: r.fileType
+    }))
+  };
   job.batches = job.batches || [];
   job.batches.push(batch);
+  job.batches = job.batches.slice(-3);
   const jobs = loadJobs();
   const idx = jobs.findIndex(j=>j.id===job.id);
   if(idx>=0){ jobs[idx] = job; saveJobs(jobs); }
