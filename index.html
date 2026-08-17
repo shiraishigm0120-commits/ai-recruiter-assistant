@@ -34,6 +34,15 @@
   textarea:focus{outline:none;border-color:var(--primary)}
   .label{font-size:14px;font-weight:600;margin:12px 0 6px}
   .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  /* 文件上传 */
+  .upload-zone{border:2px dashed var(--border);border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:var(--muted);transition:.15s;background:var(--card)}
+  .upload-zone:hover{border-color:var(--primary);color:var(--primary)}
+  .file-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;margin-top:8px;background:var(--card)}
+  .fc-name{font-weight:500;font-size:14px;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+  .fc-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fc-status{font-size:12px;color:var(--muted);white-space:nowrap}
+  .fc-status.ok{color:var(--green)}
+  .fc-status.err{color:var(--red)}
   /* 历史任务 */
   .task-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--card)}
   .task-info .t-name{font-weight:600}
@@ -94,14 +103,17 @@
   <div class="card">
     <div class="label">岗位 JD</div>
     <textarea id="jd-input" placeholder="粘贴岗位 JD，例如：AIGC视频生成师，负责AI漫剧的抽卡、提示词生成、精修AI素材、粗剪…"></textarea>
-    <div class="label">候选人简历（可粘贴，或直接上传文件）</div>
-    <textarea id="resume-input" placeholder="粘贴多份简历，每份之间用一行 ===== 分隔&#10;=====&#10;姓名：张三&#10;5年AIGC抽卡经验…" style="min-height:180px"></textarea>
-    <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" multiple style="display:none" onchange="handleFiles(this.files)">
-    <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
-      <button type="button" class="btn-ghost btn-sm" onclick="document.getElementById('file-input').click()">📎 上传 PDF / 图片简历</button>
-      <span class="hint" id="file-status" style="margin:0"></span>
+    <div class="label">候选人简历（上传文件，每个文件 = 一位候选人）</div>
+    <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+      <div style="font-size:26px">📎</div>
+      <div>点击上传简历（PDF / 图片，可多选）</div>
+      <div class="hint" style="margin:0">每份文件单独识别成一位候选人，不会拆开</div>
     </div>
-    <div class="hint">PDF 直接解析文字；图片走 OCR（中文可能有错字，建议优先 PDF）。</div>
+    <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" multiple style="display:none" onchange="handleFiles(this.files)">
+    <div id="file-list"></div>
+    <div class="label" style="margin-top:16px">或手动粘贴（每份简历用一行 ===== 分隔）</div>
+    <textarea id="resume-input" placeholder="姓名：张三&#10;5年AIGC抽卡经验…&#10;=====&#10;姓名：李四&#10;…" style="min-height:120px"></textarea>
+    <div class="hint">图片走 OCR，中文可能有错字；PDF 识别更准。</div>
   </div>
   <button class="btn-primary" style="width:100%;padding:13px" onclick="startMatch()">开始匹配</button>
 </div>
@@ -168,6 +180,7 @@ const $ = id => document.getElementById(id);
 const SKILLS = ['抽卡','剪辑','提示词','精修','粗剪','模型训练','AI工具','分镜','后期','文生图','文生视频','Stable Diffusion','Midjourney'];
 
 let state = { jd:'', resumes:[], results:[], detailIndex:-1 };
+let uploadedFiles = [];
 
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
 
@@ -206,27 +219,41 @@ function parseResumes(text){
 /* ===== 文件上传（PDF/图片） ===== */
 async function handleFiles(files){
   if(!files || files.length===0) return;
-  const status = $('file-status');
-  const texts = [];
   for(let i=0;i<files.length;i++){
     const f = files[i];
-    status.textContent = '正在解析 '+f.name+'…';
+    const item = { name:f.name, size:f.size, text:'', status:'parsing' };
+    uploadedFiles.push(item);
+    renderFileList();
     try{
       const isPdf = f.name.toLowerCase().endsWith('.pdf');
-      const text = isPdf ? await extractPdfText(f) : await extractImageText(f);
-      if(text.trim()) texts.push(text.trim());
+      item.text = isPdf ? await extractPdfText(f) : await extractImageText(f);
+      item.status = item.text.trim() ? 'ok' : 'empty';
     }catch(e){
-      status.textContent = f.name+' 解析失败，已跳过';
+      item.status = 'err';
     }
+    renderFileList();
   }
-  if(texts.length){
-    const cur = $('resume-input').value.trim();
-    const sep = cur ? '\n=====\n' : '';
-    $('resume-input').value = cur + sep + texts.join('\n=====\n');
-    status.textContent = '已提取 '+texts.length+' 份简历';
-  } else {
-    status.textContent = '没有提取到文字';
-  }
+}
+function renderFileList(){
+  const box = $('file-list');
+  if(!uploadedFiles.length){ box.innerHTML=''; return; }
+  box.innerHTML = uploadedFiles.map((f,i)=>{
+    const icon = f.name.toLowerCase().endsWith('.pdf') ? '📄' : '🖼️';
+    let statusHtml = '';
+    if(f.status==='parsing') statusHtml = '<span class="fc-status">解析中…</span>';
+    else if(f.status==='ok') statusHtml = '<span class="fc-status ok">✓ 已就绪</span>';
+    else if(f.status==='empty') statusHtml = '<span class="fc-status err">未识别到文字</span>';
+    else statusHtml = '<span class="fc-status err">解析失败</span>';
+    return '<div class="file-card">'+
+      '<div class="fc-name"><span>'+icon+' '+escapeHtml(f.name)+'</span></div>'+
+      statusHtml+
+      '<button type="button" class="btn-ghost btn-sm" onclick="removeFile('+i+')">移除</button>'+
+      '</div>';
+  }).join('');
+}
+function removeFile(i){
+  uploadedFiles.splice(i,1);
+  renderFileList();
 }
 async function extractPdfText(file){
   const pdfjsLib = window['pdfjs-dist/build/pdf'];
@@ -249,12 +276,20 @@ async function extractImageText(file){
 /* ===== 开始匹配 ===== */
 async function startMatch(){
   const jd = $('jd-input').value.trim();
-  const resumeText = $('resume-input').value.trim();
+  const pastedText = $('resume-input').value.trim();
   if(!jd){ toast('请先粘贴岗位 JD'); return; }
-  if(!resumeText){ toast('请粘贴至少一份简历'); return; }
+  const resumes = [];
+  uploadedFiles.forEach(f=>{
+    if(!f.text.trim()) return;
+    let name = f.name.replace(/\.(pdf|png|jpe?g)$/i,'');
+    const m = f.text.match(/姓名[:：]\s*([^\n]+)/);
+    if(m) name = m[1].trim();
+    resumes.push({ name, text: f.text });
+  });
+  parseResumes(pastedText).forEach(r=>resumes.push(r));
+  if(resumes.length===0){ toast('请先上传简历文件，或粘贴简历'); return; }
   state.jd = jd;
-  state.resumes = parseResumes(resumeText);
-  if(state.resumes.length===0){ toast('没识别到简历，请检查格式'); return; }
+  state.resumes = resumes;
 
   $('res-title').textContent = jd.slice(0,40) + (jd.length>40?'…':'');
   showPage('results');
