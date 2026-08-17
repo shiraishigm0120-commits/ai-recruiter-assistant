@@ -221,10 +221,11 @@ async function handleFiles(files){
   if(!files || files.length===0) return;
   for(let i=0;i<files.length;i++){
     const f = files[i];
-    const item = { name:f.name, size:f.size, text:'', status:'parsing' };
+    const item = { name:f.name, size:f.size, type:f.type, text:'', dataUrl:'', status:'parsing' };
     uploadedFiles.push(item);
     renderFileList();
     try{
+      item.dataUrl = await readFileAsDataUrl(f);
       const isPdf = f.name.toLowerCase().endsWith('.pdf');
       item.text = isPdf ? await extractPdfText(f) : await extractImageText(f);
       item.status = item.text.trim() ? 'ok' : 'empty';
@@ -255,6 +256,14 @@ function removeFile(i){
   uploadedFiles.splice(i,1);
   renderFileList();
 }
+function readFileAsDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = ()=>reject(new Error('read fail'));
+    r.readAsDataURL(file);
+  });
+}
 async function extractPdfText(file){
   const pdfjsLib = window['pdfjs-dist/build/pdf'];
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -284,7 +293,7 @@ async function startMatch(){
     let name = f.name.replace(/\.(pdf|png|jpe?g)$/i,'');
     const m = f.text.match(/姓名[:：]\s*([^\n]+)/);
     if(m) name = m[1].trim();
-    resumes.push({ name, text: f.text });
+    resumes.push({ name, text: f.text, dataUrl: f.dataUrl, fileType: f.type });
   });
   parseResumes(pastedText).forEach(r=>resumes.push(r));
   if(resumes.length===0){ toast('请先上传简历文件，或粘贴简历'); return; }
@@ -313,7 +322,9 @@ async function startMatch(){
       covered: r.covered||[],
       missing: r.missing||[],
       comment: r.comment||'暂无点评',
-      text: state.resumes[i]?.text || ''
+      text: state.resumes[i]?.text || '',
+      dataUrl: state.resumes[i]?.dataUrl || '',
+      fileType: state.resumes[i]?.fileType || ''
     };
   }).sort((a,b)=>b.score-a.score);
 
@@ -362,7 +373,22 @@ function openDetail(idx){
   $('d-covered').innerHTML = r.covered.map(s=>'<span class="ok-tag">'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无</span>';
   $('d-missing').innerHTML = r.missing.map(s=>'<span class="gap-tag">缺：'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无明显缺口</span>';
   $('d-comment').textContent = r.comment;
-  $('d-resume').textContent = r.text || '';
+  const resumeBox = $('d-resume');
+  if(r.dataUrl){
+    resumeBox.style.maxHeight = 'none';
+    resumeBox.style.whiteSpace = 'normal';
+    resumeBox.style.padding = '0';
+    if(r.fileType === 'application/pdf'){
+      resumeBox.innerHTML = '<iframe src="'+r.dataUrl+'" style="width:100%;height:420px;border:none;border-radius:8px"></iframe>';
+    } else {
+      resumeBox.innerHTML = '<img src="'+r.dataUrl+'" style="max-width:100%;display:block;border-radius:8px">';
+    }
+  } else {
+    resumeBox.style.maxHeight = '240px';
+    resumeBox.style.whiteSpace = 'pre-wrap';
+    resumeBox.style.padding = '12px';
+    resumeBox.textContent = r.text || '';
+  }
   showPage('detail');
 }
 function decide(action){
