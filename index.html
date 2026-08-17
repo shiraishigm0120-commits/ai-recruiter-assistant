@@ -48,6 +48,8 @@
   .job-name{font-weight:600;font-size:15px}
   .job-meta{font-size:12px;color:var(--muted)}
   .empty{text-align:center;color:var(--muted);padding:48px 0}
+  .guide-step{text-align:left;max-width:360px;margin:0 auto 10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text)}
+  .mode-bar{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px}
   /* 历史批次 */
   .task-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);cursor:pointer}
   .task-item:hover{border-color:var(--primary)}
@@ -80,6 +82,8 @@
   .modal-bg.show{display:flex}
   .modal{background:#fff;border-radius:14px;padding:24px;width:440px;max-width:92vw}
   .modal h3{margin-bottom:12px}
+  .feedback-link{color:var(--primary);font-size:13px;text-decoration:none}
+  .feedback-link:hover{text-decoration:underline}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:200;opacity:0;transition:.3s}
   .toast.show{opacity:1}
 </style>
@@ -101,6 +105,7 @@
 <div class="page active" id="page-home">
   <h1>工作台</h1>
   <p class="sub">按岗位管理筛选，点击岗位进入后粘贴简历、开始匹配。</p>
+  <input type="text" id="job-search" placeholder="🔍 搜索岗位名称…" style="margin-bottom:16px" oninput="renderJobs()">
   <div id="job-list"></div>
 </div>
 
@@ -163,8 +168,12 @@
       <button class="btn-ghost btn-sm" onclick="goBackToJob()" style="margin-bottom:8px">← 返回岗位</button>
       <h1 id="res-title" style="margin-bottom:0">匹配结果</h1>
     </div>
-    <div class="sub" style="margin:0" id="res-count"></div>
+    <div style="text-align:right">
+      <button class="btn-primary btn-sm" onclick="copyRecommendList()">📋 复制推荐名单</button>
+      <div class="sub" style="margin:6px 0 0" id="res-count"></div>
+    </div>
   </div>
+  <div id="mode-bar" class="mode-bar" style="display:none"></div>
   <div id="result-list"></div>
 </div>
 
@@ -183,6 +192,8 @@
     <div id="d-covered"></div>
     <div class="label">技能缺口</div>
     <div id="d-missing"></div>
+    <div class="label">凭什么行</div>
+    <div class="comment-box" id="d-evidence" style="background:#f0fdf4"></div>
     <div class="label">AI 点评</div>
     <div class="comment-box" id="d-comment"></div>
     <div class="label">简历原样</div>
@@ -199,7 +210,16 @@
     <div class="label">DeepSeek API Key（直连用，可选）</div>
     <input type="text" id="key-input" placeholder="sk-…">
     <div class="hint">都不填则用内置演示模式打分。</div>
-    <div style="display:flex;gap:10px;margin-top:20px">
+    <div class="label">使用统计</div>
+    <div class="hint" id="stats-text" style="margin:0 0 10px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn-ghost btn-sm" style="flex:1" onclick="exportData()">⬇ 导出数据</button>
+      <button class="btn-ghost btn-sm" style="flex:1" onclick="document.getElementById('import-input').click()">⬆ 导入数据</button>
+    </div>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(this.files)">
+    <div class="hint" style="margin:0 0 12px">数据存在本机浏览器，换设备前可先导出备份。</div>
+    <a class="feedback-link" href="https://github.com/shiraishigm0120-commits/ai-recruiter-assistant/issues/new" target="_blank">💬 反馈问题 / 提建议</a>
+    <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn-primary" style="flex:1" onclick="saveSettings()">保存</button>
       <button class="btn-ghost" onclick="closeSettings()">取消</button>
     </div>
@@ -211,7 +231,7 @@
 <script>
 const $ = id=>document.getElementById(id);
 
-let state = { currentJobId:null, resumes:[], results:[], detailIndex:-1 };
+let state = { currentJobId:null, resumes:[], results:[], detailIndex:-1, mode:'' };
 let uploadedFiles = [];
 const DEFAULT_PROXY = 'https://ai-recruitment.shiraishi-gm0120.workers.dev';
 
@@ -251,10 +271,22 @@ function goBackToJob(){
 
 /* ===== 工作台：岗位列表 ===== */
 function renderJobs(){
-  const jobs = loadJobs().sort((a,b)=>b.createdAt-a.createdAt);
+  const all = loadJobs().sort((a,b)=>b.createdAt-a.createdAt);
+  const kw = ($('job-search') ? $('job-search').value : '').trim().toLowerCase();
+  const jobs = kw ? all.filter(j=>j.name.toLowerCase().indexOf(kw)>=0) : all;
   const box = $('job-list');
+  if(all.length===0){
+    box.innerHTML = '<div class="empty">'+
+      '<div style="font-size:40px;margin-bottom:8px">👋</div>'+
+      '<div style="font-weight:600;color:var(--text);margin-bottom:12px">三步开始筛选简历</div>'+
+      '<div class="guide-step">① 点右上角「新建岗位」，填岗位名称 + JD</div>'+
+      '<div class="guide-step">② 进入岗位，粘贴或上传简历（PDF/Word/图片/文字）</div>'+
+      '<div class="guide-step">③ 点「开始匹配」，AI 打分 + 点评，一键复制推荐名单</div>'+
+      '<br><button class="btn-primary" onclick="goNew()">+ 新建第一个岗位</button></div>';
+    return;
+  }
   if(jobs.length===0){
-    box.innerHTML = '<div class="empty">还没有岗位<br><br><button class="btn-primary" onclick="goNew()">+ 新建岗位</button></div>';
+    box.innerHTML = '<div class="empty">没有匹配「'+escapeHtml($('job-search').value)+'」的岗位</div>';
     return;
   }
   box.innerHTML = jobs.map(j=>{
@@ -343,7 +375,8 @@ function renderHistory(job){
     const n = b.results ? b.results.length : 0;
     return '<div class="task-item" onclick="openBatch(\''+job.id+'\',\''+b.id+'\')">'+
       '<div class="task-info"><div class="t-name">'+fmtDate(b.createdAt)+' 的筛选</div>'+
-      '<div class="t-meta">'+n+' 份简历</div></div></div>';
+      '<div class="t-meta">'+n+' 份简历</div></div>'+
+      '<button class="btn-ghost btn-sm" onclick="event.stopPropagation();delBatch(\''+job.id+'\',\''+b.id+'\')">删除</button></div>';
   }).join('');
 }
 
@@ -354,10 +387,21 @@ function openBatch(jobId, batchId){
   if(!batch) return;
   state.currentJobId = jobId;
   state.results = batch.results || [];
+  state.mode = batch.mode || '演示';
   $('res-title').textContent = job.name;
   $('res-count').textContent = '共 '+state.results.length+' 份简历 · '+fmtDate(batch.createdAt);
   renderResults();
   showPage('results');
+}
+function delBatch(jobId, batchId){
+  if(!confirm('确定删除这条筛选记录？')) return;
+  const jobs = loadJobs();
+  const job = jobs.find(j=>j.id===jobId);
+  if(!job) return;
+  job.batches = (job.batches||[]).filter(b=>b.id!==batchId);
+  saveJobs(jobs);
+  if(state.currentJobId === jobId) renderHistory(job);
+  toast('筛选记录已删除');
 }
 
 /* ===== 简历解析 ===== */
@@ -493,6 +537,7 @@ async function startMatch(){
     if(results) mode = 'DeepSeek';
   }catch(e){ results = null; }
   if(!results){ results = resumes.map(r=>mockScore(r, job.jd)); mode = '演示'; }
+  state.mode = mode;
 
   state.results = results.map((r,i)=>{
     return {
@@ -501,6 +546,7 @@ async function startMatch(){
       covered: r.covered||[],
       missing: r.missing||[],
       comment: r.comment||'暂无点评',
+      evidence: r.evidence||'',
       text: resumes[i]?.text || '',
       dataUrl: resumes[i]?.dataUrl || '',
       fileType: resumes[i]?.fileType || ''
@@ -509,10 +555,10 @@ async function startMatch(){
 
   // 保存为新的筛选批次（不存原图/原文件 base64，避免撑爆本地存储）
   const batch = {
-    id:uid(), createdAt:Date.now(),
+    id:uid(), createdAt:Date.now(), mode: mode,
     results: state.results.map(r=>({
       name: r.name, score: r.score, covered: r.covered, missing: r.missing,
-      comment: r.comment, text: (r.text||'').slice(0,2000), fileType: r.fileType
+      comment: r.comment, evidence: r.evidence||'', text: (r.text||'').slice(0,2000), fileType: r.fileType
     }))
   };
   job.batches = job.batches || [];
@@ -530,16 +576,34 @@ async function startMatch(){
 /* ===== 结果展示：判断条 + 原样内容 ===== */
 function renderResults(){
   const list = state.results;
-  const high = list.filter(r=>r.score>=60);
-  const low = list.filter(r=>r.score<60);
   let html = '';
-  high.forEach((r,i)=> html += candCard(r, i));
-  if(low.length>0){
-    html += '<div class="low-group" onclick="toggleLow(this)">低分候选人（'+low.length+'人）点击展开</div><div id="low-box" style="display:none">';
-    low.forEach((r,i)=> html += candCard(r, high.length+i));
-    html += '</div>';
-  }
+  list.forEach((r,i)=> html += candCard(r, i));
   $('result-list').innerHTML = html;
+  updateModeBar();
+}
+function updateModeBar(){
+  const bar = $('mode-bar');
+  if(state.mode === '演示'){
+    bar.style.display = 'block';
+    bar.innerHTML = '⚠️ 演示模式：DeepSeek 未连接，仅用关键词粗筛打分，结果仅供参考。可在右上角「设置」配置代理/Key 启用真 AI 打分。';
+  } else {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+  }
+}
+function copyRecommendList(){
+  const list = state.results || [];
+  const push = list.filter(r=>r.score>=60);
+  const skip = list.filter(r=>r.score<60);
+  let txt = '';
+  if(push.length) txt += '值得推进：'+push.map(r=>r.name+'（'+r.score+'分）').join('、');
+  if(skip.length) txt += (txt?'\n':'')+'跳过：'+skip.map(r=>r.name+'（'+r.score+'分）').join('、');
+  if(!txt) txt = '暂无候选人';
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('推荐名单已复制，可粘贴到 Boss/Moka')).catch(()=>toast('复制失败'));
+  } else {
+    toast('当前浏览器不支持一键复制');
+  }
 }
 function scoreColor(score){
   return score>=80 ? 'var(--green)' : (score>=60 ? 'var(--amber)' : 'var(--red)');
@@ -567,11 +631,6 @@ function rawPreview(r){
   if(!txt) return '';
   return '<div class="raw-preview">'+escapeHtml(txt.slice(0,160))+(txt.length>160?'…':'')+'</div>';
 }
-function toggleLow(el){
-  const box = $('low-box'); box.style.display = box.style.display==='none'?'block':'none';
-  el.style.display='none';
-}
-
 /* ===== 详情 ===== */
 function openDetail(idx){
   state.detailIndex = idx;
@@ -582,6 +641,7 @@ function openDetail(idx){
   $('d-cover').textContent = '技能覆盖 '+r.covered.length+' 项 · 匹配度 '+r.score+' 分';
   $('d-covered').innerHTML = r.covered.map(s=>'<span class="ok-tag">'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无</span>';
   $('d-missing').innerHTML = r.missing.map(s=>'<span class="gap-tag">缺：'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无明显缺口</span>';
+  $('d-evidence').textContent = r.evidence || '暂无具体证据';
   $('d-comment').textContent = r.comment;
   const resumeBox = $('d-resume');
   if(r.dataUrl && r.fileType && r.fileType.indexOf('image')===0){
@@ -608,6 +668,10 @@ function openSettings(){
   const p = localStorage.getItem('proxy_url');
   $('proxy-input').value = p===null ? DEFAULT_PROXY : p;
   $('key-input').value = localStorage.getItem('deepseek_key')||'';
+  const jobs = loadJobs();
+  const batches = jobs.reduce((s,j)=>s+(j.batches?j.batches.length:0), 0);
+  const resumes = jobs.reduce((s,j)=>s+(j.batches?j.batches.reduce((x,b)=>x+(b.results?b.results.length:0),0):0), 0);
+  $('stats-text').textContent = jobs.length+' 个岗位 · '+batches+' 次筛选 · '+resumes+' 份简历已分析';
   $('modal-settings').classList.add('show');
 }
 function closeSettings(){ $('modal-settings').classList.remove('show'); }
@@ -615,6 +679,35 @@ function saveSettings(){
   localStorage.setItem('deepseek_key', $('key-input').value.trim());
   localStorage.setItem('proxy_url', $('proxy-input').value.trim());
   closeSettings(); toast('已保存');
+}
+function exportData(){
+  const blob = new Blob([JSON.stringify({jobs:loadJobs()}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ai-recruiter-backup-'+fmtDate(Date.now()).replace(/[: ]/g,'-')+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出备份');
+}
+function importData(files){
+  if(!files || !files[0]) return;
+  const f = files[0];
+  const reader = new FileReader();
+  reader.onload = function(){
+    try{
+      const data = JSON.parse(reader.result);
+      const jobs = Array.isArray(data) ? data : (data.jobs || []);
+      if(!Array.isArray(jobs) || jobs.some(j=>!j || typeof j!=='object' || !j.id || !j.name)) throw new Error('bad');
+      if(!confirm('导入将覆盖当前 '+loadJobs().length+' 个岗位，确定继续？')) return;
+      saveJobs(jobs);
+      closeSettings();
+      renderJobs();
+      toast('已导入 '+jobs.length+' 个岗位');
+    }catch(e){
+      toast('导入失败：文件格式不对');
+    }
+  };
+  reader.readAsText(f);
 }
 
 /* ===== DeepSeek 调用 ===== */
@@ -651,7 +744,7 @@ async function callDeepSeek(jd, resumes){
 }
 function buildPrompt(jd, resumes){
   const resumeBlock = resumes.map((r,i)=>(i+1)+'. '+r.name+'：\n'+r.text).join('\n\n');
-  return '请为以下岗位JD评估候选人的技能匹配度。\n\n【岗位JD】\n'+jd+'\n\n【候选人简历】\n'+resumeBlock+'\n\n请返回JSON对象，格式：{"results":[{"name":"姓名","score":85,"covered":["已具备技能"],"missing":["缺失技能"],"comment":"一句话中文点评（优势+缺口+建议）"}]}\n评分标准：综合技能覆盖度和相关经验。comment要口语化，像HR说的话。';
+  return '请为以下岗位JD评估候选人的技能匹配度。\n\n【岗位JD】\n'+jd+'\n\n【候选人简历】\n'+resumeBlock+'\n\n请返回JSON对象，格式：{"results":[{"name":"姓名","score":85,"covered":["已具备技能"],"missing":["缺失技能"],"evidence":"凭什么行：几年相关经验、做过什么项目（一句话，可空字符串）","comment":"一句话中文点评（优势+缺口+建议）"}]}\n评分标准：综合技能覆盖度和相关经验。comment要口语化，像HR说的话。evidence要具体（如\"5年AIGC抽卡经验，做过XX漫剧项目\"）。';
 }
 
 /* ===== 演示模式（mock，通用岗位） ===== */
@@ -678,7 +771,9 @@ function mockScore(resume, jdText){
   if(strong) comment += '命中'+strong+'等关键词';
   if(missing.length) comment += '，缺'+missing.slice(0,2).join('、');
   comment += '，匹配度'+score+'%。';
-  return { name: resume.name, score, covered, missing, comment };
+  const exp = resume.text.match(/(\d+)\s*年/);
+  const evidence = exp ? exp[0].replace(/\s/g,'')+'相关经验' : '';
+  return { name: resume.name, score, covered, missing, evidence, comment };
 }
 
 /* ===== 粘贴截图（Ctrl+V） ===== */
@@ -687,13 +782,14 @@ document.addEventListener('paste', function(e){
   if(!active || active.id !== 'resume-input') return;
   const items = e.clipboardData && e.clipboardData.items;
   if(!items) return;
+  const files = [];
   for(const it of items){
     if(it.type && it.type.indexOf('image')===0){
       const file = it.getAsFile();
-      if(file){ e.preventDefault(); handleFiles([file]); }
-      return;
+      if(file) files.push(file);
     }
   }
+  if(files.length){ e.preventDefault(); handleFiles(files); }
 });
 
 renderJobs();
