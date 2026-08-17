@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI招聘助手 · 专注AIGC岗位</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-dark:#4338ca; --bg:#f5f6fa; --card:#fff;
+    --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; --green:#16a34a; --red:#dc2626; --amber:#d97706;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+  .page{display:none;max-width:880px;margin:0 auto;padding:24px 20px 80px}
+  .page.active{display:block}
+  /* 导航 */
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .logo{font-weight:700;font-size:18px;color:var(--primary)}
+  .nav-actions{display:flex;gap:10px}
+  button{cursor:pointer;border:none;border-radius:8px;font-size:14px;padding:9px 16px;font-weight:500;transition:.15s}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover{background:var(--primary-dark)}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+  .btn-danger{background:#fff;border:1px solid var(--border);color:var(--red)}
+  .btn-green{background:var(--green);color:#fff}
+  .btn-sm{padding:6px 12px;font-size:13px}
+  h1{font-size:22px;margin-bottom:8px}
+  h2{font-size:16px;margin-bottom:12px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+  /* 卡片 */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+  textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:14px;font-family:inherit;resize:vertical}
+  textarea:focus{outline:none;border-color:var(--primary)}
+  .label{font-size:14px;font-weight:600;margin:12px 0 6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  /* 历史任务 */
+  .task-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--card)}
+  .task-info .t-name{font-weight:600}
+  .task-info .t-meta{font-size:12px;color:var(--muted)}
+  .empty{text-align:center;color:var(--muted);padding:48px 0}
+  /* 结果列表 */
+  .result-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .cand-card{display:flex;align-items:center;gap:16px;padding:16px;border:1px solid var(--border);border-radius:12px;margin-bottom:12px;background:var(--card);cursor:pointer;transition:.15s}
+  .cand-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(79,70,229,.08)}
+  .score-badge{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:#fff;flex-shrink:0}
+  .cand-main{flex:1}
+  .cand-name{font-weight:600;font-size:15px}
+  .cand-cover{font-size:12px;color:var(--muted)}
+  .cand-comment{font-size:13px;color:var(--text);margin-top:4px}
+  .low-group{background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:12px 16px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer}
+  /* 详情 */
+  .detail-score{display:flex;align-items:center;gap:20px;margin-bottom:16px}
+  .big-score{font-size:48px;font-weight:700;color:var(--primary)}
+  .gap-tag{display:inline-block;background:#fef2f2;color:var(--red);border-radius:6px;padding:3px 10px;font-size:13px;margin:3px 4px 3px 0}
+  .ok-tag{display:inline-block;background:#f0fdf4;color:var(--green);border-radius:6px;padding:3px 10px;font-size:13px;margin:3px 4px 3px 0}
+  .comment-box{background:#eef2ff;border-radius:10px;padding:14px;font-size:14px}
+  .resume-box{background:#f9fafb;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;max-height:240px;overflow:auto}
+  .loading{text-align:center;padding:40px;color:var(--primary)}
+  .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* 弹窗 */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+  .modal-bg.show{display:flex}
+  .modal{background:#fff;border-radius:14px;padding:24px;width:440px;max-width:92vw}
+  .modal h3{margin-bottom:12px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:200;opacity:0;transition:.3s}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo">AI招聘助手 <span style="font-size:12px;color:var(--muted);font-weight:400">专注AIGC岗位</span></div>
+  <div class="nav-actions">
+    <button class="btn-ghost btn-sm" onclick="openSettings()">⚙ 设置</button>
+    <button class="btn-primary btn-sm" onclick="goNew()">+ 新建筛选</button>
+  </div>
+</div>
+
+<!-- 页面1 首页/工作台 -->
+<div class="page active" id="page-home">
+  <h1>工作台</h1>
+  <p class="sub">把 JD 和简历交给 AI，10 分钟筛完一个 AIGC 岗位。</p>
+  <div id="task-list"></div>
+</div>
+
+<!-- 页面2 新建筛选 -->
+<div class="page" id="page-new">
+  <button class="btn-ghost btn-sm" onclick="goHome()" style="margin-bottom:16px">← 返回</button>
+  <h1>新建筛选</h1>
+  <div class="card">
+    <div class="label">岗位 JD</div>
+    <textarea id="jd-input" placeholder="粘贴岗位 JD，例如：AIGC视频生成师，负责AI漫剧的抽卡、提示词生成、精修AI素材、粗剪…"></textarea>
+    <div class="label">候选人简历（多份用 ===== 分隔）</div>
+    <textarea id="resume-input" placeholder="粘贴多份简历，每份之间用一行 ===== 分隔&#10;=====&#10;姓名：张三&#10;5年AIGC抽卡经验…" style="min-height:180px"></textarea>
+    <div class="hint">支持 .txt 文本粘贴。真实产品可扩展文件上传。</div>
+  </div>
+  <button class="btn-primary" style="width:100%;padding:13px" onclick="startMatch()">开始匹配</button>
+</div>
+
+<!-- 页面3 匹配结果 -->
+<div class="page" id="page-results">
+  <div class="result-head">
+    <div>
+      <button class="btn-ghost btn-sm" onclick="goNew()" style="margin-bottom:8px">← 重新筛选</button>
+      <h1 id="res-title" style="margin-bottom:0">匹配结果</h1>
+    </div>
+    <div class="sub" style="margin:0" id="res-count"></div>
+  </div>
+  <div id="result-list"></div>
+</div>
+
+<!-- 页面4 候选人详情 -->
+<div class="page" id="page-detail">
+  <button class="btn-ghost btn-sm" onclick="goResults()" style="margin-bottom:16px">← 返回列表</button>
+  <div class="card">
+    <div class="detail-score">
+      <div class="big-score" id="d-score">--</div>
+      <div>
+        <h1 id="d-name" style="margin-bottom:4px">候选人</h1>
+        <div id="d-cover" class="sub" style="margin:0"></div>
+      </div>
+    </div>
+    <div class="label">技能覆盖</div>
+    <div id="d-covered"></div>
+    <div class="label">技能缺口</div>
+    <div id="d-missing"></div>
+    <div class="label">AI 点评</div>
+    <div class="comment-box" id="d-comment"></div>
+    <div class="label">简历原文</div>
+    <div class="resume-box" id="d-resume"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn-green" style="flex:1" onclick="decide('推进')">✓ 推进</button>
+      <button class="btn-danger" style="flex:1" onclick="decide('淘汰')">✗ 淘汰</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="modal-bg" id="modal-settings">
+  <div class="modal">
+    <h3>设置</h3>
+    <div class="label">DeepSeek API Key</div>
+    <input id="key-input" type="password" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px" placeholder="sk-...（留空则用演示模式）">
+    <div class="hint">Key 只存在你本地浏览器，不会上传到服务器。</div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-primary" style="flex:1" onclick="saveSettings()">保存</button>
+      <button class="btn-ghost" style="flex:1" onclick="closeSettings()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const SKILLS = ['抽卡','剪辑','提示词','精修','粗剪','模型训练','AI工具','分镜','后期','文生图','文生视频','Stable Diffusion','Midjourney'];
+
+let state = { jd:'', resumes:[], results:[], detailIndex:-1 };
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
+
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+function goHome(){ renderTasks(); showPage('home'); }
+function goNew(){ showPage('new'); }
+function goResults(){ renderResults(); showPage('results'); }
+
+/* ===== 设置 ===== */
+function openSettings(){ $('key-input').value = localStorage.getItem('deepseek_key')||''; $('modal-settings').classList.add('show'); }
+function closeSettings(){ $('modal-settings').classList.remove('show'); }
+function saveSettings(){
+  localStorage.setItem('deepseek_key', $('key-input').value.trim());
+  closeSettings(); toast('已保存');
+}
+
+/* ===== 简历解析 ===== */
+function parseResumes(text){
+  return text.split(/=+\s*/).map(s=>s.trim()).filter(Boolean).map((r,i)=>{
+    let name = '候选人'+(i+1);
+    const m = r.match(/姓名[:：]\s*([^\n]+)/);
+    if(m) name = m[1].trim();
+    return { name, text:r };
+  });
+}
+
+/* ===== 开始匹配 ===== */
+async function startMatch(){
+  const jd = $('jd-input').value.trim();
+  const resumeText = $('resume-input').value.trim();
+  if(!jd){ toast('请先粘贴岗位 JD'); return; }
+  if(!resumeText){ toast('请粘贴至少一份简历'); return; }
+  state.jd = jd;
+  state.resumes = parseResumes(resumeText);
+  if(state.resumes.length===0){ toast('没识别到简历，请检查格式'); return; }
+
+  $('res-title').textContent = jd.slice(0,40) + (jd.length>40?'…':'');
+  showPage('results');
+  $('result-list').innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在拆解 JD 并匹配…</div>';
+  $('res-count').textContent = '共 '+state.resumes.length+' 份简历';
+
+  let results = null, mode = '演示';
+  try{
+    results = await callDeepSeek(jd, state.resumes);
+    if(results) mode = 'DeepSeek';
+  }catch(e){
+    results = null;
+  }
+  if(!results){ results = state.resumes.map(r=>mockScore(r, jd)); mode = '演示'; }
+
+  // 补全缺字段 + 排序
+  state.results = results.map((r,i)=>{
+    return {
+      name: r.name || state.resumes[i]?.name || ('候选人'+(i+1)),
+      score: Number(r.score)||0,
+      covered: r.covered||[],
+      missing: r.missing||[],
+      comment: r.comment||'暂无点评',
+      text: state.resumes[i]?.text || ''
+    };
+  }).sort((a,b)=>b.score-a.score);
+
+  renderResults();
+  saveTask(state.jd.slice(0,30), state.resumes.length);
+  toast('匹配完成（'+mode+'模式）');
+}
+
+function renderResults(){
+  const list = state.results;
+  const high = list.filter(r=>r.score>=60);
+  const low = list.filter(r=>r.score<60);
+  let html = '';
+  high.forEach((r,i)=>{
+    html += candCard(r, i);
+  });
+  if(low.length>0){
+    html += '<div class="low-group" onclick="toggleLow(this)">低分候选人（'+low.length+'人）点击展开</div><div id="low-box" style="display:none">';
+    low.forEach((r,i)=>{
+      html += candCard(r, high.length+i);
+    });
+    html += '</div>';
+  }
+  $('result-list').innerHTML = html;
+}
+function candCard(r, idx){
+  const color = r.score>=80?'var(--green)':(r.score>=60?'var(--amber)':'var(--red)');
+  return '<div class="cand-card" onclick="openDetail('+idx+')">'+
+    '<div class="score-badge" style="background:'+color+'">'+r.score+'</div>'+
+    '<div class="cand-main"><div class="cand-name">'+escapeHtml(r.name)+'</div>'+
+    '<div class="cand-cover">技能覆盖 '+r.covered.length+' 项'+(r.missing.length?' · 缺 '+r.missing.length+' 项':'')+'</div>'+
+    '<div class="cand-comment">'+escapeHtml(r.comment)+'</div></div></div>';
+}
+function toggleLow(el){
+  const box = $('low-box'); box.style.display = box.style.display==='none'?'block':'none';
+  el.style.display='none';
+}
+
+/* ===== 详情 ===== */
+function openDetail(idx){
+  state.detailIndex = idx;
+  const r = state.results[idx];
+  $('d-score').textContent = r.score;
+  $('d-name').textContent = r.name;
+  $('d-cover').textContent = '技能覆盖 '+r.covered.length+' 项 · 匹配度 '+r.score+' 分';
+  $('d-covered').innerHTML = r.covered.map(s=>'<span class="ok-tag">'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无</span>';
+  $('d-missing').innerHTML = r.missing.map(s=>'<span class="gap-tag">缺：'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无明显缺口</span>';
+  $('d-comment').textContent = r.comment;
+  $('d-resume').textContent = r.text || '';
+  showPage('detail');
+}
+function decide(action){
+  const r = state.results[state.detailIndex];
+  r.decision = action;
+  toast(r.name+' 已标记「'+action+'」');
+  renderResults();
+  goResults();
+}
+
+/* ===== DeepSeek 调用 ===== */
+async function callDeepSeek(jd, resumes){
+  const key = localStorage.getItem('deepseek_key')||'';
+  if(!key) return null;
+  const prompt = buildPrompt(jd, resumes);
+  const resp = await fetch('https://api.deepseek.com/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body: JSON.stringify({
+      model:'deepseek-chat',
+      messages:[
+        {role:'system',content:'你是资深招聘顾问。只返回JSON，不要任何其他文字。'},
+        {role:'user',content:prompt}
+      ],
+      temperature:0.3,
+      response_format:{type:'json_object'}
+    })
+  });
+  if(!resp.ok) throw new Error('api '+resp.status);
+  const data = await resp.json();
+  const content = data.choices[0].message.content;
+  const parsed = JSON.parse(content);
+  const arr = Array.isArray(parsed) ? parsed : (parsed.results || []);
+  return arr;
+}
+function buildPrompt(jd, resumes){
+  const resumeBlock = resumes.map((r,i)=>(i+1)+'. '+r.name+'：\n'+r.text).join('\n\n');
+  return '请为以下岗位JD评估候选人的技能匹配度。\n\n【岗位JD】\n'+jd+'\n\n【候选人简历】\n'+resumeBlock+'\n\n请返回JSON对象，格式：{"results":[{"name":"姓名","score":85,"covered":["已具备技能"],"missing":["缺失技能"],"comment":"一句话中文点评（优势+缺口+建议）"}]}\n评分标准：综合技能覆盖度和相关经验。comment要口语化，像HR说的话。';
+}
+
+/* ===== 演示模式（mock） ===== */
+function mockScore(resume, jdText){
+  const jdSkills = SKILLS.filter(s=>jdText.includes(s));
+  const needSkills = jdSkills.length ? jdSkills : SKILLS;
+  const covered = SKILLS.filter(s=>resume.text.includes(s));
+  const missing = needSkills.filter(s=>!resume.text.includes(s));
+  const coverRatio = covered.length / Math.max(1, needSkills.length);
+  let score = Math.round(coverRatio * 100);
+  if(resume.text.length > 300) score += 5;
+  if(resume.text.length < 100) score -= 15;
+  score = Math.min(98, Math.max(25, score));
+  let comment = '';
+  const strong = covered.slice(0,2).join('、');
+  if(strong) comment += '具备'+strong+'等技能';
+  if(missing.length) comment += '，但缺'+missing.slice(0,2).join('、');
+  comment += '，匹配度'+score+'%。';
+  return { name: resume.name, score, covered, missing, comment };
+}
+
+/* ===== 历史任务 ===== */
+function renderTasks(){
+  const tasks = JSON.parse(localStorage.getItem('tasks')||'[]');
+  const box = $('task-list');
+  if(tasks.length===0){
+    box.innerHTML = '<div class="empty">还没有筛选任务<br><br><button class="btn-primary" onclick="goNew()">+ 新建筛选</button></div>';
+    return;
+  }
+  box.innerHTML = tasks.map((t,i)=>'<div class="task-item"><div class="task-info"><div class="t-name">'+escapeHtml(t.title)+'</div><div class="t-meta">'+t.time+' · '+t.count+' 份简历</div></div><button class="btn-ghost btn-sm" onclick="delTask('+i+')">删除</button></div>').join('');
+}
+function saveTask(title, count){
+  const tasks = JSON.parse(localStorage.getItem('tasks')||'[]');
+  tasks.unshift({title, count, time:new Date().toLocaleString('zh-CN')});
+  localStorage.setItem('tasks', JSON.stringify(tasks.slice(0,20)));
+}
+function delTask(i){
+  const tasks = JSON.parse(localStorage.getItem('tasks')||'[]');
+  tasks.splice(i,1); localStorage.setItem('tasks', JSON.stringify(tasks)); renderTasks();
+}
+
+/* ===== 工具 ===== */
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+renderTasks();
+</script>
+</body>
+</html>
