@@ -144,6 +144,9 @@
     <div class="label">DeepSeek API Key</div>
     <input id="key-input" type="password" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px" placeholder="sk-...（留空则用演示模式）">
     <div class="hint">Key 只存在你本地浏览器，不会上传到服务器。</div>
+    <div class="label">代理地址（推荐，解决跨域）</div>
+    <input id="proxy-input" type="text" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px" placeholder="https://xxx.workers.dev（留空则直连）">
+    <div class="hint">部署 Cloudflare Worker 后填入，Key 存在 Worker 里更安全。</div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn-primary" style="flex:1" onclick="saveSettings()">保存</button>
       <button class="btn-ghost" style="flex:1" onclick="closeSettings()">取消</button>
@@ -171,10 +174,15 @@ function goNew(){ showPage('new'); }
 function goResults(){ renderResults(); showPage('results'); }
 
 /* ===== 设置 ===== */
-function openSettings(){ $('key-input').value = localStorage.getItem('deepseek_key')||''; $('modal-settings').classList.add('show'); }
+function openSettings(){
+  $('key-input').value = localStorage.getItem('deepseek_key')||'';
+  $('proxy-input').value = localStorage.getItem('proxy_url')||'';
+  $('modal-settings').classList.add('show');
+}
 function closeSettings(){ $('modal-settings').classList.remove('show'); }
 function saveSettings(){
   localStorage.setItem('deepseek_key', $('key-input').value.trim());
+  localStorage.setItem('proxy_url', $('proxy-input').value.trim());
   closeSettings(); toast('已保存');
 }
 
@@ -283,21 +291,27 @@ function decide(action){
 /* ===== DeepSeek 调用 ===== */
 async function callDeepSeek(jd, resumes){
   const key = localStorage.getItem('deepseek_key')||'';
-  if(!key) return null;
+  const proxyUrl = localStorage.getItem('proxy_url')||'';
+  if(!proxyUrl && !key) return null;
   const prompt = buildPrompt(jd, resumes);
-  const resp = await fetch('https://api.deepseek.com/chat/completions', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body: JSON.stringify({
-      model:'deepseek-chat',
-      messages:[
-        {role:'system',content:'你是资深招聘顾问。只返回JSON，不要任何其他文字。'},
-        {role:'user',content:prompt}
-      ],
-      temperature:0.3,
-      response_format:{type:'json_object'}
-    })
-  });
+  const payload = {
+    model:'deepseek-chat',
+    messages:[
+      {role:'system',content:'你是资深招聘顾问。只返回JSON，不要任何其他文字。'},
+      {role:'user',content:prompt}
+    ],
+    temperature:0.3,
+    response_format:{type:'json_object'}
+  };
+  let url, headers;
+  if(proxyUrl){
+    url = proxyUrl;
+    headers = {'Content-Type':'application/json'};
+  } else {
+    url = 'https://api.deepseek.com/chat/completions';
+    headers = {'Content-Type':'application/json','Authorization':'Bearer '+key};
+  }
+  const resp = await fetch(url, {method:'POST', headers, body: JSON.stringify(payload)});
   if(!resp.ok) throw new Error('api '+resp.status);
   const data = await resp.json();
   const content = data.choices[0].message.content;
