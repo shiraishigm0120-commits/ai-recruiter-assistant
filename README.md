@@ -1,50 +1,55 @@
-# AI招聘助手 · 专注AIGC岗位
+# AI招聘助手
 
-把 JD 和简历交给 AI，10 分钟筛完一个 AIGC 岗位。
+把 JD 和简历交给 AI，快速筛出「谁值得推进」。
 
 在线体验：https://shiraishigm0120-commits.github.io/ai-recruiter-assistant/
 
-## 产品功能
+## 产品定位
 
-- 粘贴 JD + 多份简历 → AI 拆解技能、逐份打分排序
-- 每份候选人显示：匹配度分数 + 技能覆盖 + 一句 AI 点评
-- 点进详情看「技能缺口清单」，标记推进/淘汰
+一个「简历预筛判断器」：HR 在招聘网站上看到简历，粘贴进来，AI 秒出「分数 + 技能缺口 + 一句话点评」，快速判断哪些人值得推进到招聘系统（如 Moka）。
 
-## 两种模式
+## 使用流程
+
+1. **新建岗位**：填岗位名称 + JD
+2. **进入岗位**：粘贴简历（文字 / 截图），或上传文件（PDF / Word / 图片 / 文本）
+3. **开始匹配**：AI 打分排序，结果页显示「判断条 + 简历原样」
+4. 历史筛选自动留存，可随时回看
+
+## 支持的文件格式
+
+| 格式 | 解析方式 |
+|------|---------|
+| PDF | pdf.js 提取文字 |
+| Word (.docx) | mammoth 解析 |
+| 图片 (png/jpg/…) | OCR 识别 |
+| 纯文本 (.txt / .md) | 直接读取 |
+| 粘贴文字 / 截图 | 直接读取 / OCR |
+
+> 注：老格式 `.doc`（非 `.docx`）是二进制，浏览器无法解析，请另存为 `.docx` 或 PDF。
+
+## 打分模式
 
 | 模式 | 说明 |
 |------|------|
-| 演示模式 | 没配置 key 时自动启用，用内置规则打分，能演示完整流程 |
-| DeepSeek 真模型 | 配好代理后，用真 AI 打分 + 生成点评句 |
+| DeepSeek 真模型 | **默认启用**，走内置 Worker 代理，真 AI 打分 + 生成点评 |
+| 演示模式 | 代理失效时自动降级，用关键词粗筛打分（结果页会标注） |
 
-## 接真大模型（DeepSeek）步骤
+## 接真大模型（默认已配好）
 
-浏览器无法直接调用 DeepSeek（跨域限制），需要用一个 Cloudflare Worker 做代理，key 藏在 Worker 里。
+产品默认内置了 Cloudflare Worker 代理地址，打开即用真 DeepSeek。
 
-### 1. 部署 Worker 代理
+如需换成自己的代理：
 
-1. 注册 https://cloudflare.com 账号（免费）
-2. 进「Workers & Pages」→「Create」→「Create Worker」
-3. 把本仓库的 `worker.js` 内容**全部粘贴**进去（覆盖默认代码）
-4. 点「Deploy」
-5. 进该 Worker 的「Settings」→「Variables and Secrets」→ 添加一个 Secret：
-   - 名称：`DEEPSEEK_KEY`
-   - 值：你的 DeepSeek API key（sk- 开头）
-6. 回到代码页再点一次「Deploy」让 Secret 生效
-
-### 2. 把代理地址填进产品
-
-1. 复制 Worker 的 URL（形如 `https://你的名字.workers.dev`）
-2. 打开产品 → 右上角「设置」
-3. 在「代理地址」栏粘贴 Worker URL → 保存
-
-之后点「开始匹配」，右上角会显示「DeepSeek 模式」，点评句就是真 AI 生成的。
+1. 部署 `worker.js`（见文件说明），在 Worker 里添加 `DEEPSEEK_KEY` 密钥
+2. 产品右上角「设置」→ 在「代理地址」填入你的 Worker URL → 保存
 
 ## 本地运行
 
-直接双击 `index.html` 用浏览器打开即可（演示模式可完整跑通）。
+直接双击 `index.html` 用浏览器打开即可。
 
 ## 文件说明
 
-- `index.html` — 产品（单文件，4 页面）
+- `index.html` — 产品（单文件，5 页面）
+- `lib/` — 本地化依赖（pdf.js、mammoth.js，不依赖国外 CDN）
 - `worker.js` — Cloudflare Worker 代理（接真 DeepSeek 用）
+
