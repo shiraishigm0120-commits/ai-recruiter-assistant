@@ -64,6 +64,7 @@
   .judge-name{font-weight:600;font-size:15px}
   .judge-missing{font-size:12px;color:var(--red);margin-left:auto}
   .judge-comment{font-size:13px;color:var(--text);margin:8px 0 0 14px}
+  .hard-req{margin:6px 0 0 14px}
   .raw-preview{margin:10px 0 0 14px;padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:140px;overflow:hidden}
   .raw-preview img{max-width:100%;max-height:120px;display:block;border-radius:6px}
   .low-group{background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:12px 16px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer}
@@ -188,7 +189,9 @@
         <div id="d-cover" class="sub" style="margin:0"></div>
       </div>
     </div>
-    <div class="label" style="margin-top:0">技能覆盖</div>
+    <div class="label" style="margin-top:0">硬性条件对照</div>
+    <div id="d-hardreq"></div>
+    <div class="label">技能覆盖</div>
     <div id="d-covered"></div>
     <div class="label">技能缺口</div>
     <div id="d-missing"></div>
@@ -217,7 +220,7 @@
       <button class="btn-ghost btn-sm" style="flex:1" onclick="document.getElementById('import-input').click()">⬆ 导入数据</button>
     </div>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(this.files)">
-    <div class="hint" style="margin:0 0 12px">数据存在本机浏览器，换设备前可先导出备份。</div>
+    <div class="hint" style="margin:0 0 12px">🔒 简历只存本机浏览器，不联网不上传；仅在你配置了代理/Key 时，简历文字才会发给 DeepSeek 用于打分。换设备前可先导出备份。</div>
     <a class="feedback-link" href="https://github.com/shiraishigm0120-commits/ai-recruiter-assistant/issues/new" target="_blank">💬 反馈问题 / 提建议</a>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn-primary" style="flex:1" onclick="saveSettings()">保存</button>
@@ -250,6 +253,21 @@ function fmtDate(ts){
   const d = new Date(ts);
   const p = n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+
+/* ===== 本地使用统计（埋点雏形，纯本机不联网） ===== */
+function loadUsage(){ try{ return JSON.parse(localStorage.getItem('usage')||'null'); }catch(e){ return null; } }
+function saveUsage(u){ try{ localStorage.setItem('usage', JSON.stringify(u)); }catch(e){} }
+function trackVisit(){
+  const u = loadUsage() || {first:Date.now(), visits:0, batches:0, resumes:0};
+  u.visits = (u.visits||0)+1;
+  saveUsage(u);
+}
+function trackBatch(n){
+  const u = loadUsage() || {first:Date.now(), visits:0, batches:0, resumes:0};
+  u.batches = (u.batches||0)+1;
+  u.resumes = (u.resumes||0)+(n||0);
+  saveUsage(u);
 }
 
 /* ===== 工具 ===== */
@@ -547,6 +565,7 @@ async function startMatch(){
       missing: r.missing||[],
       comment: r.comment||'暂无点评',
       evidence: r.evidence||'',
+      hardReq: buildHardReq(job.jd, resumes[i]?.text || ''),
       text: resumes[i]?.text || '',
       dataUrl: resumes[i]?.dataUrl || '',
       fileType: resumes[i]?.fileType || ''
@@ -558,7 +577,8 @@ async function startMatch(){
     id:uid(), createdAt:Date.now(), mode: mode,
     results: state.results.map(r=>({
       name: r.name, score: r.score, covered: r.covered, missing: r.missing,
-      comment: r.comment, evidence: r.evidence||'', text: (r.text||'').slice(0,2000), fileType: r.fileType
+      comment: r.comment, evidence: r.evidence||'', hardReq: r.hardReq||[],
+      text: (r.text||'').slice(0,2000), fileType: r.fileType
     }))
   };
   job.batches = job.batches || [];
@@ -567,6 +587,7 @@ async function startMatch(){
   const jobs = loadJobs();
   const idx = jobs.findIndex(j=>j.id===job.id);
   if(idx>=0){ jobs[idx] = job; saveJobs(jobs); }
+  trackBatch(state.results.length);
 
   $('res-count').textContent = '共 '+state.results.length+' 份简历 · '+(mode==='演示'?'演示模式（关键词粗筛，建议配置 DeepSeek）':'DeepSeek 模式');
   renderResults();
@@ -596,11 +617,21 @@ function copyRecommendList(){
   const push = list.filter(r=>r.score>=60);
   const skip = list.filter(r=>r.score<60);
   let txt = '';
-  if(push.length) txt += '值得推进：'+push.map(r=>r.name+'（'+r.score+'分）').join('、');
-  if(skip.length) txt += (txt?'\n':'')+'跳过：'+skip.map(r=>r.name+'（'+r.score+'分）').join('、');
+  if(push.length){
+    txt += '【值得推进】'+push.length+'人\n';
+    txt += push.map((r,i)=>{
+      const reason = r.evidence || r.comment || (r.missing.length?'缺'+r.missing.slice(0,2).join('、'):'无明显缺口');
+      return (i+1)+'. '+r.name+'（'+r.score+'分）→ 简藏抓取 → Moka｜'+reason;
+    }).join('\n');
+  }
+  if(skip.length){
+    if(txt) txt += '\n\n';
+    txt += '【跳过】'+skip.length+'人\n';
+    txt += skip.map(r=>'- '+r.name+'（'+r.score+'分'+(r.missing.length?'，缺'+r.missing.slice(0,3).join('、'):'')+'）').join('\n');
+  }
   if(!txt) txt = '暂无候选人';
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(txt).then(()=>toast('推荐名单已复制，可粘贴到 Boss/Moka')).catch(()=>toast('复制失败'));
+    navigator.clipboard.writeText(txt).then(()=>toast('推荐名单已复制，可粘贴到 Boss/简藏')).catch(()=>toast('复制失败'));
   } else {
     toast('当前浏览器不支持一键复制');
   }
@@ -617,8 +648,17 @@ function candCard(r, idx){
       '<span class="judge-missing">'+(r.missing.length ? '缺：'+escapeHtml(r.missing.slice(0,3).join('、')) : '无明显缺口')+'</span>'+
     '</div>'+
     '<div class="judge-comment">'+escapeHtml(r.comment)+'</div>'+
+    hardReqRow(r)+
     rawPreview(r)+
     '</div>';
+}
+function hardReqRow(r){
+  const reqs = r.hardReq || [];
+  if(!reqs.length) return '';
+  const tags = reqs.map(q=>{
+    return '<span class="'+(q.hit?'ok-tag':'gap-tag')+'" style="margin:2px 4px 2px 0">'+(q.hit?'✓':'✗')+' '+escapeHtml(q.label)+'</span>';
+  }).join('');
+  return '<div class="hard-req">'+tags+'</div>';
 }
 function rawPreview(r){
   if(r.dataUrl && r.fileType && r.fileType.indexOf('image')===0){
@@ -639,6 +679,7 @@ function openDetail(idx){
   $('d-score').style.color = scoreColor(r.score);
   $('d-name').textContent = r.name;
   $('d-cover').textContent = '技能覆盖 '+r.covered.length+' 项 · 匹配度 '+r.score+' 分';
+  $('d-hardreq').innerHTML = hardReqRow(r) || '<span class="sub">未提取到硬性条件</span>';
   $('d-covered').innerHTML = r.covered.map(s=>'<span class="ok-tag">'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无</span>';
   $('d-missing').innerHTML = r.missing.map(s=>'<span class="gap-tag">缺：'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无明显缺口</span>';
   $('d-evidence').textContent = r.evidence || '暂无具体证据';
@@ -671,7 +712,11 @@ function openSettings(){
   const jobs = loadJobs();
   const batches = jobs.reduce((s,j)=>s+(j.batches?j.batches.length:0), 0);
   const resumes = jobs.reduce((s,j)=>s+(j.batches?j.batches.reduce((x,b)=>x+(b.results?b.results.length:0),0):0), 0);
-  $('stats-text').textContent = jobs.length+' 个岗位 · '+batches+' 次筛选 · '+resumes+' 份简历已分析';
+  const u = loadUsage() || {};
+  const days = u.first ? Math.max(1, Math.ceil((Date.now()-u.first)/86400000)) : 0;
+  let stats = jobs.length+' 个岗位 · '+batches+' 次筛选 · '+resumes+' 份简历已分析';
+  if(days) stats += ' · 累计 '+days+' 天 · 打开 '+(u.visits||0)+' 次';
+  $('stats-text').textContent = stats;
   $('modal-settings').classList.add('show');
 }
 function closeSettings(){ $('modal-settings').classList.remove('show'); }
@@ -776,6 +821,38 @@ function mockScore(resume, jdText){
   return { name: resume.name, score, covered, missing, evidence, comment };
 }
 
+/* ===== JD 硬条件对照（学历/年限/技能，独立于 AI 的可解释清单） ===== */
+function extractHardReq(jd){
+  const reqs = [];
+  let edu = '';
+  if(/博士/.test(jd)) edu='博士';
+  else if(/硕士|研究生/.test(jd)) edu='硕士';
+  else if(/本科/.test(jd)) edu='本科';
+  else if(/大专|专科/.test(jd)) edu='大专';
+  if(edu) reqs.push({type:'edu', label:'学历：'+edu, value:edu});
+  const y = jd.match(/(\d+)\s*年/);
+  if(y) reqs.push({type:'exp', label:y[1]+'年以上经验', value:+y[1]});
+  extractKeywords(jd).filter(s=>s.length>=2).slice(0,4).forEach(s=>reqs.push({type:'skill', label:'技能：'+s, value:s}));
+  return reqs;
+}
+function checkHardReq(req, text){
+  if(req.type==='edu'){
+    const rank={'大专':1,'本科':2,'硕士':3,'博士':4};
+    for(const k of Object.keys(rank)){
+      if(text.indexOf(k)>=0 && rank[k]>=rank[req.value]) return true;
+    }
+    return false;
+  }
+  if(req.type==='exp'){
+    const years = (text.match(/(\d+)\s*年/g)||[]).map(s=>parseInt(s)).filter(n=>n>=1&&n<=40);
+    return years.some(n=>n>=req.value);
+  }
+  return text.indexOf(req.value)>=0;
+}
+function buildHardReq(jd, text){
+  return extractHardReq(jd).map(q=>({label:q.label, hit:checkHardReq(q, text||'')}));
+}
+
 /* ===== 粘贴截图（Ctrl+V） ===== */
 document.addEventListener('paste', function(e){
   const active = document.activeElement;
@@ -792,6 +869,7 @@ document.addEventListener('paste', function(e){
   if(files.length){ e.preventDefault(); handleFiles(files); }
 });
 
+trackVisit();
 renderJobs();
 </script>
 </body>
