@@ -87,6 +87,33 @@
   .feedback-link:hover{text-decoration:underline}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:200;opacity:0;transition:.3s}
   .toast.show{opacity:1}
+  @media(max-width:640px){
+    .page{padding:16px 12px 80px}
+    .nav{padding:12px 14px;flex-wrap:wrap;gap:8px}
+    .result-head{flex-direction:column;align-items:stretch;gap:10px}
+    .result-head div:last-child{text-align:left!important}
+    .judge-bar{flex-wrap:wrap;gap:6px}
+    .judge-score{font-size:16px}
+    .judge-missing{margin-left:0;width:100%}
+    .status-bar{flex-wrap:wrap}
+    .detail-score{flex-direction:column;align-items:flex-start;gap:10px}
+    .big-score{font-size:36px}
+    .modal{width:96vw;padding:18px}
+    .job-card{flex-wrap:wrap;gap:8px}
+    h1{font-size:19px}
+    .raw-preview img{max-height:200px}
+  }
+  .status-bar{display:flex;gap:6px;margin:8px 0 0 14px}
+  .status-badge{font-size:12px;padding:2px 8px;border-radius:4px;font-weight:500;margin-left:auto}
+  .status-badge.push{background:#f0fdf4;color:var(--green)}
+  .status-badge.pass{background:#fef2f2;color:var(--red)}
+  .btn-red{background:transparent;border:1px solid var(--red);color:var(--red)}
+  .btn-red:hover{background:var(--red);color:#fff}
+  .prev-appear{font-size:12px;color:var(--muted);margin:6px 0 0 14px;padding:4px 8px;background:#f3f4f6;border-radius:6px}
+  .unread-dot{display:inline-block;width:8px;height:8px;background:var(--primary);border-radius:50%;margin-right:6px;flex-shrink:0}
+  .cand-unread{border-left:3px solid var(--primary)}
+  .job-card-select{cursor:default}
+  .job-card-select:hover{box-shadow:none}
 </style>
 <script src="lib/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -104,9 +131,24 @@
 
 <!-- 页面1 工作台：岗位列表 -->
 <div class="page active" id="page-home">
+  <div style="background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;border-radius:14px;padding:20px;margin-bottom:20px">
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px">AI招聘助手</div>
+    <div style="font-size:14px;opacity:.9">把 JD 和简历贴进去，AI 秒出「分数 + 技能缺口 + 理由」，快速判断谁值得推进。支持 PDF / Word / 图片 / 文字。</div>
+  </div>
   <h1>工作台</h1>
   <p class="sub">按岗位管理筛选，点击岗位进入后粘贴简历、开始匹配。</p>
-  <input type="text" id="job-search" placeholder="🔍 搜索岗位名称…" style="margin-bottom:16px" oninput="renderJobs()">
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+    <input type="text" id="job-search" placeholder="🔍 搜索岗位名称…" style="flex:1;margin:0" oninput="renderJobs()">
+    <button class="btn-ghost btn-sm" onclick="toggleSelectMode()" id="select-btn" style="white-space:nowrap">☐ 选择</button>
+  </div>
+  <div id="select-bar" style="display:none;margin-bottom:10px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;align-items:center;gap:10px">
+    <span id="select-count" style="font-size:13px;font-weight:500">已选 0 个</span>
+    <button class="btn-ghost btn-sm" onclick="selectAllJobs()">全选</button>
+    <button class="btn-ghost btn-sm" onclick="clearSelect()">取消</button>
+    <button class="btn-red btn-sm" onclick="batchDelJobs()" style="margin-left:auto">🗑 批量删除</button>
+  </div>
+  <input type="text" id="cand-search" placeholder="🔍 搜索候选人姓名（跨岗位）…" style="margin-bottom:16px" oninput="searchCandidate()">
+  <div id="cand-search-results"></div>
   <div id="job-list"></div>
 </div>
 
@@ -189,8 +231,10 @@
         <div id="d-cover" class="sub" style="margin:0"></div>
       </div>
     </div>
+    <div class="status-bar" id="d-status-bar" style="margin:0 0 12px"></div>
     <div class="label" style="margin-top:0">硬性条件对照</div>
     <div id="d-hardreq"></div>
+    <div id="d-prev" style="margin:8px 0 0"></div>
     <div class="label">技能覆盖</div>
     <div id="d-covered"></div>
     <div class="label">技能缺口</div>
@@ -234,7 +278,7 @@
 <script>
 const $ = id=>document.getElementById(id);
 
-let state = { currentJobId:null, resumes:[], results:[], detailIndex:-1, mode:'' };
+let state = { currentJobId:null, currentBatchId:null, resumes:[], results:[], detailIndex:-1, mode:'', selectMode:false, selectIds:[] };
 let uploadedFiles = [];
 const DEFAULT_PROXY = 'https://ai-recruitment.shiraishi-gm0120.workers.dev';
 
@@ -288,6 +332,28 @@ function goBackToJob(){
 }
 
 /* ===== 工作台：岗位列表 ===== */
+function searchCandidate(){
+  const kw = ($('cand-search') ? $('cand-search').value.trim() : '');
+  const box = $('cand-search-results');
+  if(!kw || kw.length<2){ box.innerHTML=''; return; }
+  const jobs = loadJobs();
+  const hits = [];
+  jobs.forEach(j=>{
+    (j.batches||[]).forEach(b=>{
+      (b.results||[]).forEach(r=>{
+        if(r.name && r.name.indexOf(kw)>=0){
+          hits.push({jobId:j.id, jobName:j.name, batchId:b.id, batchTime:b.createdAt, name:r.name, score:r.score});
+        }
+      });
+    });
+  });
+  if(!hits.length){ box.innerHTML='<div class="sub" style="margin-bottom:12px">未找到匹配「'+escapeHtml(kw)+'」的候选人</div>'; return; }
+  box.innerHTML = '<div class="sub" style="margin-bottom:8px">找到 '+hits.length+' 个匹配结果：</div>'+
+    hits.slice(0,20).map(h=>'<div class="task-item" onclick="openBatch(\''+h.jobId+'\',\''+h.batchId+'\')">'+
+      '<div class="task-info"><div class="t-name">'+escapeHtml(h.name)+'（'+h.score+'分）</div>'+
+      '<div class="t-meta">'+escapeHtml(h.jobName)+' · '+fmtDate(h.batchTime)+'</div></div>'+
+      '<span class="hint" style="margin:0">查看 →</span></div>').join('');
+}
 function renderJobs(){
   const all = loadJobs().sort((a,b)=>b.createdAt-a.createdAt);
   const kw = ($('job-search') ? $('job-search').value : '').trim().toLowerCase();
@@ -309,14 +375,51 @@ function renderJobs(){
   }
   box.innerHTML = jobs.map(j=>{
     const n = j.batches ? j.batches.length : 0;
-    return '<div class="job-card" onclick="openJob(\''+j.id+'\')">'+
+    const checked = state.selectIds.indexOf(j.id)>=0 ? 'checked' : '';
+    const cb = state.selectMode ? '<input type="checkbox" class="job-cb" data-id="'+j.id+'" '+(checked?'checked':'')+' onclick="event.stopPropagation();toggleSelect(\''+j.id+'\')" style="margin-right:10px;width:18px;height:18px;cursor:pointer">' : '';
+    return '<div class="job-card'+(state.selectMode?' job-card-select':'')+'" onclick="'+(state.selectMode?'':'openJob(\''+j.id+'\')')+'">'+cb+
       '<div class="task-info"><div class="job-name">'+escapeHtml(j.name)+'</div>'+
       '<div class="job-meta">'+fmtDate(j.createdAt)+' 创建 · '+n+' 次筛选</div></div>'+
-      '<div style="display:flex;align-items:center;gap:8px">'+
+      (!state.selectMode ? '<div style="display:flex;align-items:center;gap:8px">'+
         '<span class="hint" style="margin:0">进入 →</span>'+
         '<button class="btn-ghost btn-sm" onclick="event.stopPropagation();delJob(\''+j.id+'\')">删除</button>'+
-      '</div></div>';
+      '</div>' : '');
   }).join('');
+  updateSelectBar();
+}
+
+/* ===== 批量删除岗位 ===== */
+function toggleSelectMode(){
+  state.selectMode = !state.selectMode;
+  if(!state.selectMode){ state.selectIds = []; }
+  $('select-btn').textContent = state.selectMode ? '☑ 完成' : '☐ 选择';
+  $('select-bar').style.display = state.selectMode ? 'flex' : 'none';
+  renderJobs();
+}
+function toggleSelect(id){
+  const idx = state.selectIds.indexOf(id);
+  if(idx>=0) state.selectIds.splice(idx,1);
+  else state.selectIds.push(id);
+  updateSelectBar();
+}
+function selectAllJobs(){
+  const ids = (loadJobs()||[]).map(j=>j.id);
+  state.selectIds = ids;
+  renderJobs();
+}
+function clearSelect(){ state.selectIds = []; renderJobs(); }
+function updateSelectBar(){
+  $('select-count').textContent = '已选 '+state.selectIds.length+' 个';
+}
+function batchDelJobs(){
+  if(!state.selectIds.length){ toast('请先选择岗位'); return; }
+  if(!confirm('确定删除选中的 '+state.selectIds.length+' 个岗位及所有筛选记录？')) return;
+  let jobs = loadJobs();
+  jobs = jobs.filter(j=>state.selectIds.indexOf(j.id)<0);
+  saveJobs(jobs);
+  state.selectIds = [];
+  renderJobs();
+  toast('已删除');
 }
 
 /* ===== 新建岗位 ===== */
@@ -404,6 +507,7 @@ function openBatch(jobId, batchId){
   const batch = (job.batches||[]).find(b=>b.id===batchId);
   if(!batch) return;
   state.currentJobId = jobId;
+  state.currentBatchId = batchId;
   state.results = batch.results || [];
   state.mode = batch.mode || '演示';
   $('res-title').textContent = job.name;
@@ -565,6 +669,8 @@ async function startMatch(){
       missing: r.missing||[],
       comment: r.comment||'暂无点评',
       evidence: r.evidence||'',
+      status: '',
+      viewed: false,
       hardReq: buildHardReq(job.jd, resumes[i]?.text || ''),
       text: resumes[i]?.text || '',
       dataUrl: resumes[i]?.dataUrl || '',
@@ -577,7 +683,7 @@ async function startMatch(){
     id:uid(), createdAt:Date.now(), mode: mode,
     results: state.results.map(r=>({
       name: r.name, score: r.score, covered: r.covered, missing: r.missing,
-      comment: r.comment, evidence: r.evidence||'', hardReq: r.hardReq||[],
+      comment: r.comment, evidence: r.evidence||'', status: r.status||'', viewed: r.viewed===false?false:true, hardReq: r.hardReq||[],
       text: (r.text||'').slice(0,2000), fileType: r.fileType
     }))
   };
@@ -588,6 +694,7 @@ async function startMatch(){
   const idx = jobs.findIndex(j=>j.id===job.id);
   if(idx>=0){ jobs[idx] = job; saveJobs(jobs); }
   trackBatch(state.results.length);
+  state.currentBatchId = batch.id;
 
   $('res-count').textContent = '共 '+state.results.length+' 份简历 · '+(mode==='演示'?'演示模式（关键词粗筛，建议配置 DeepSeek）':'DeepSeek 模式');
   renderResults();
@@ -639,16 +746,55 @@ function copyRecommendList(){
 function scoreColor(score){
   return score>=80 ? 'var(--green)' : (score>=60 ? 'var(--amber)' : 'var(--red)');
 }
+function setCandStatus(idx, status){
+  state.results[idx].status = status;
+  renderResults();
+  const job = getJob(state.currentJobId);
+  if(!job || !state.currentBatchId) return;
+  const batch = (job.batches||[]).find(b=>b.id===state.currentBatchId);
+  if(!batch || !batch.results[idx]) return;
+  batch.results[idx].status = status;
+  const jobs = loadJobs();
+  const jIdx = jobs.findIndex(j=>j.id===job.id);
+  if(jIdx>=0){ jobs[jIdx]=job; saveJobs(jobs); }
+}
+
+/* ===== 批次间候选人去重 ===== */
+function findPrevAppearances(name){
+  if(!name || !state.currentBatchId) return [];
+  const job = getJob(state.currentJobId);
+  if(!job) return [];
+  const prev = (job.batches||[]).filter(b=>b.id!==state.currentBatchId).reverse();
+  const hits = [];
+  for(const b of prev){
+    for(const r of (b.results||[])){
+      if(r.name === name){
+        hits.push({time:fmtDate(b.createdAt), score:r.score, status:r.status||''});
+        break;
+      }
+    }
+  }
+  return hits;
+}
 function candCard(r, idx){
   const color = scoreColor(r.score);
-  return '<div class="cand-card" onclick="openDetail('+idx+')">'+
+  const statusBadge = r.status==='push' ? '<span class="status-badge push">🔥 推进</span>' : (r.status==='pass' ? '<span class="status-badge pass">❌ 淘汰</span>' : '');
+  const unreadDot = !r.viewed ? '<span class="unread-dot"></span>' : '';
+  return '<div class="cand-card'+(r.viewed===false?' cand-unread':'')+'" onclick="openDetail('+idx+')">'+unreadDot+
     '<div class="judge-bar" style="border-left-color:'+color+'">'+
       '<span class="judge-score" style="color:'+color+'">'+r.score+'分</span>'+
       '<span class="judge-name">'+escapeHtml(r.name)+'</span>'+
+      statusBadge+
       '<span class="judge-missing">'+(r.missing.length ? '缺：'+escapeHtml(r.missing.slice(0,3).join('、')) : '无明显缺口')+'</span>'+
     '</div>'+
     '<div class="judge-comment">'+escapeHtml(r.comment)+'</div>'+
+    prevAppearHtml(r)+
     hardReqRow(r)+
+    '<div class="status-bar">'+
+      '<button class="btn-sm '+(r.status==='push'?'btn-primary':'btn-ghost')+'" onclick="event.stopPropagation();setCandStatus('+idx+',\'push\')">🔥 推进</button>'+
+      '<button class="btn-sm '+(r.status==='pass'?'btn-red':'btn-ghost')+'" onclick="event.stopPropagation();setCandStatus('+idx+',\'pass\')">❌ 淘汰</button>'+
+      (r.status ? '<button class="btn-sm btn-ghost" onclick="event.stopPropagation();setCandStatus('+idx+',\'\')">↩ 重置</button>' : '')+
+    '</div>'+
     rawPreview(r)+
     '</div>';
 }
@@ -659,6 +805,16 @@ function hardReqRow(r){
     return '<span class="'+(q.hit?'ok-tag':'gap-tag')+'" style="margin:2px 4px 2px 0">'+(q.hit?'✓':'✗')+' '+escapeHtml(q.label)+'</span>';
   }).join('');
   return '<div class="hard-req">'+tags+'</div>';
+}
+function prevAppearHtml(r){
+  const hits = findPrevAppearances(r.name);
+  if(!hits.length) return '';
+  return '<div class="prev-appear">🔄 历史出现：'+hits.map(h=>h.time+'（'+h.score+'分'+statusBrief(h.status)+'）').join(' → ')+'</div>';
+}
+function statusBrief(s){
+  if(s==='push') return '·已推进';
+  if(s==='pass') return '·已淘汰';
+  return '';
 }
 function rawPreview(r){
   if(r.dataUrl && r.fileType && r.fileType.indexOf('image')===0){
@@ -675,11 +831,28 @@ function rawPreview(r){
 function openDetail(idx){
   state.detailIndex = idx;
   const r = state.results[idx];
+  if(r.viewed === false){
+    r.viewed = true;
+    const job = getJob(state.currentJobId);
+    if(job && state.currentBatchId){
+      const batch = (job.batches||[]).find(b=>b.id===state.currentBatchId);
+      if(batch && batch.results[idx]) batch.results[idx].viewed = true;
+      const jobs = loadJobs();
+      const jIdx = jobs.findIndex(j=>j.id===job.id);
+      if(jIdx>=0){ jobs[jIdx]=job; saveJobs(jobs); }
+    }
+    renderResults();
+  }
   $('d-score').textContent = r.score;
   $('d-score').style.color = scoreColor(r.score);
   $('d-name').textContent = r.name;
   $('d-cover').textContent = '技能覆盖 '+r.covered.length+' 项 · 匹配度 '+r.score+' 分';
+  $('d-status-bar').innerHTML =
+    '<button class="btn-sm '+(r.status==='push'?'btn-primary':'btn-ghost')+'" onclick="setCandStatus('+idx+',\'push\');openDetail('+idx+')">🔥 推进</button>'+
+    '<button class="btn-sm '+(r.status==='pass'?'btn-red':'btn-ghost')+'" onclick="setCandStatus('+idx+',\'pass\');openDetail('+idx+')">❌ 淘汰</button>'+
+    (r.status ? '<button class="btn-sm btn-ghost" onclick="setCandStatus('+idx+',\'\');openDetail('+idx+')">↩ 重置</button>' : '');
   $('d-hardreq').innerHTML = hardReqRow(r) || '<span class="sub">未提取到硬性条件</span>';
+  $('d-prev').innerHTML = prevAppearHtml(r) || '';
   $('d-covered').innerHTML = r.covered.map(s=>'<span class="ok-tag">'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无</span>';
   $('d-missing').innerHTML = r.missing.map(s=>'<span class="gap-tag">缺：'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无明显缺口</span>';
   $('d-evidence').textContent = r.evidence || '暂无具体证据';
@@ -708,7 +881,8 @@ function openDetail(idx){
 function openSettings(){
   const p = localStorage.getItem('proxy_url');
   $('proxy-input').value = p===null ? DEFAULT_PROXY : p;
-  $('key-input').value = localStorage.getItem('deepseek_key')||'';
+  const enc = localStorage.getItem('deepseek_key_enc');
+  $('key-input').value = enc ? atob(enc) : '';
   const jobs = loadJobs();
   const batches = jobs.reduce((s,j)=>s+(j.batches?j.batches.length:0), 0);
   const resumes = jobs.reduce((s,j)=>s+(j.batches?j.batches.reduce((x,b)=>x+(b.results?b.results.length:0),0):0), 0);
@@ -721,7 +895,9 @@ function openSettings(){
 }
 function closeSettings(){ $('modal-settings').classList.remove('show'); }
 function saveSettings(){
-  localStorage.setItem('deepseek_key', $('key-input').value.trim());
+  const key = $('key-input').value.trim();
+  localStorage.setItem('deepseek_key_enc', key ? btoa(key) : '');
+  localStorage.setItem('deepseek_key', key); // 保留兼容旧版
   localStorage.setItem('proxy_url', $('proxy-input').value.trim());
   closeSettings(); toast('已保存');
 }
@@ -757,7 +933,8 @@ function importData(files){
 
 /* ===== DeepSeek 调用 ===== */
 async function callDeepSeek(jd, resumes){
-  const key = localStorage.getItem('deepseek_key')||'';
+  const enc = localStorage.getItem('deepseek_key_enc');
+  const key = enc ? atob(enc) : (localStorage.getItem('deepseek_key')||'');
   let proxyUrl = localStorage.getItem('proxy_url');
   if(proxyUrl === null) proxyUrl = DEFAULT_PROXY;
   if(!proxyUrl && !key) return null;
@@ -804,20 +981,38 @@ function extractKeywords(text){
 }
 function mockScore(resume, jdText){
   const tokens = extractKeywords(jdText);
-  const covered = tokens.filter(t=>resume.text.includes(t));
-  const missing = tokens.filter(t=>!resume.text.includes(t));
+  const content = resume.text;
+  const covered = tokens.filter(t=>content.includes(t));
+  const missing = tokens.filter(t=>!content.includes(t));
   const ratio = tokens.length ? covered.length/tokens.length : 0;
   let score = Math.round(ratio*100);
-  if(resume.text.length>300) score += 5;
-  if(resume.text.length<80) score -= 15;
+  if(content.length>300) score += 5;
+  if(content.length<80) score -= 15;
+  // 经验加分
+  const expMatch = content.match(/(\d+)\s*年/);
+  const expYears = expMatch ? parseInt(expMatch[1]) : 0;
+  if(expYears>=3) score += 10;
+  else if(expYears>=1) score += 5;
+  // 项目/作品加分
+  const hasProject = /项目|作品|案例|实战|负责|参与|完成/.test(content);
+  if(hasProject) score += 5;
   score = Math.min(98, Math.max(20, score));
+  // 更智能的 evidence
+  let evidence = '';
+  if(expYears>0) evidence += expYears+'年相关经验';
+  const proj = content.match(/项目[：:]\s*([^\n。，,]+)/) || content.match(/([^\n。，,]{2,10}(?:项目|作品|经验|经历))/);
+  if(proj) evidence += '，做过'+proj[1].trim();
+  if(!evidence && hasProject) evidence += '有相关项目经历';
+  if(!evidence) evidence = '暂无具体经验证据';
+  // 更自然的 comment
   let comment = '';
-  const strong = covered.slice(0,2).join('、');
+  const strong = covered.slice(0,3).join('、');
   if(strong) comment += '命中'+strong+'等关键词';
-  if(missing.length) comment += '，缺'+missing.slice(0,2).join('、');
-  comment += '，匹配度'+score+'%。';
-  const exp = resume.text.match(/(\d+)\s*年/);
-  const evidence = exp ? exp[0].replace(/\s/g,'')+'相关经验' : '';
+  if(missing.length) comment += '，缺'+missing.slice(0,3).join('、');
+  if(expYears>0) comment += '，有'+expYears+'年经验';
+  if(hasProject) comment += '，有项目经历';
+  if(!comment) comment = '简历内容较少，建议补充';
+  comment += '，仅供参考。';
   return { name: resume.name, score, covered, missing, evidence, comment };
 }
 
@@ -839,13 +1034,26 @@ function checkHardReq(req, text){
   if(req.type==='edu'){
     const rank={'大专':1,'本科':2,'硕士':3,'博士':4};
     for(const k of Object.keys(rank)){
-      if(text.indexOf(k)>=0 && rank[k]>=rank[req.value]) return true;
+      if(text.indexOf(k)>=0 && rank[k]>=rank[req.value]){
+        // 排除「本科在读」「本科以下」等虚假匹配
+        const idx = text.indexOf(k);
+        const after = text.slice(idx + k.length, idx + k.length + 6);
+        if(after.indexOf('在读')>=0 || after.indexOf('以下')>=0 || after.indexOf('以内')>=0) continue;
+        return true;
+      }
     }
     return false;
   }
   if(req.type==='exp'){
     const years = (text.match(/(\d+)\s*年/g)||[]).map(s=>parseInt(s)).filter(n=>n>=1&&n<=40);
-    return years.some(n=>n>=req.value);
+    // 排除「X年以下」「X年以内」
+    const validYears = years.filter(y=>{
+      const idx = text.indexOf(y+'年');
+      if(idx<0) return false;
+      const after = text.slice(idx + (y+'年').length, idx + (y+'年').length + 6);
+      return after.indexOf('以下')<0 && after.indexOf('以内')<0;
+    });
+    return validYears.some(n=>n>=req.value);
   }
   return text.indexOf(req.value)>=0;
 }
