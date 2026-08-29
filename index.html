@@ -36,6 +36,44 @@
   textarea:focus{outline:none;border-color:var(--primary)}
   .label{font-size:14px;font-weight:600;margin:12px 0 6px}
   .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .ga-group{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--card)}
+  .ga-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .ga-name{flex:1;margin:0}
+  .ga-row{display:flex;gap:8px;margin-bottom:6px}
+  .ga-item{flex:1;margin:0}
+  .ga-del{flex:0 0 auto;padding:6px 10px}
+  .iv-sel{flex:1;min-width:0;border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit;background:var(--card)}
+  .iv-sel:focus{outline:none;border-color:var(--primary)}
+  .iv-group{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--card)}
+  .iv-gname{margin:0 0 8px;font-size:14px;font-weight:600}
+  .iv-item-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .iv-item-text{flex:1;font-size:13px;margin:0}
+  .iv-chips{display:flex;gap:4px;flex:0 0 auto}
+  .iv-chip{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;cursor:pointer;padding:0;font-family:inherit}
+  .iv-chip:hover{border-color:var(--primary);color:var(--primary)}
+  .iv-chip.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+  .iv-chip.wide{width:auto;height:26px;border-radius:6px;padding:0 8px}
+  .iv-chip.wide.judge-y.on{background:var(--green);border-color:var(--green)}
+  .iv-chip.wide.judge-n.on{background:var(--red);border-color:var(--red)}
+  .iv-concl{display:flex;gap:8px;margin:0 0 12px}
+  .iv-concl button{flex:1}
+  .iv-concl .on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .acc-head{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;padding:2px 0}
+  .acc-arrow{color:var(--muted);font-size:12px;flex:0 0 auto;transition:transform .15s}
+  .acc-title{font-size:14px;font-weight:600;color:var(--text)}
+  .acc-actions{display:flex;gap:8px;align-items:center}
+  .acc-body{display:none;margin-top:12px}
+  .acc-body.open{display:block}
+  .acc-head:hover .acc-title{color:var(--primary)}
+  .std-summary{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+  .std-chip{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 8px}
+  .std-grp{margin-bottom:10px}
+  .std-grp-name{font-size:13px;font-weight:600;margin:0 0 4px}
+  .std-row{display:flex;align-items:flex-start;gap:6px;font-size:13px;margin-bottom:3px}
+  .std-hit{color:var(--green);flex:0 0 auto}
+  .std-miss{color:var(--red);flex:0 0 auto}
+  .std-item{flex:1;min-width:0}
+  .std-note{color:var(--muted);font-size:12px}
   /* 文件上传 */
   .upload-zone{border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;cursor:pointer;color:var(--muted);transition:.15s;background:var(--card)}
   .upload-zone:hover{border-color:var(--primary);color:var(--primary)}
@@ -172,31 +210,74 @@
   <h1 id="job-title" style="margin-bottom:2px">岗位</h1>
   <div class="sub" id="job-date" style="margin-bottom:16px"></div>
 
-  <div class="card">
-    <div class="label" style="margin-top:0;display:flex;justify-content:space-between;align-items:center">
-      <span>岗位 JD</span>
-      <button class="btn-ghost btn-sm" onclick="toggleEditJd()">编辑</button>
+  <div class="card acc">
+    <div class="acc-head" onclick="toggleCard(this)">
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">岗位 JD</span></span>
+      <span class="acc-actions" onclick="event.stopPropagation()">
+        <button class="btn-ghost btn-sm" onclick="toggleEditJd()">编辑</button>
+      </span>
     </div>
-    <div class="resume-box" id="job-jd-view"></div>
-    <div id="jd-edit-box" style="display:none">
-      <textarea id="job-jd-edit" style="margin-top:8px"></textarea>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn-primary btn-sm" onclick="saveJd()">保存</button>
-        <button class="btn-ghost btn-sm" onclick="toggleEditJd(false)">取消</button>
+    <div class="acc-body">
+      <div class="resume-box" id="job-jd-view"></div>
+      <div id="jd-edit-box" style="display:none">
+        <textarea id="job-jd-edit" style="margin-top:8px"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-primary btn-sm" onclick="saveJd()">保存</button>
+          <button class="btn-ghost btn-sm" onclick="toggleEditJd(false)">取消</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="label" style="margin-top:0">粘贴简历（Ctrl+V 直接粘贴文字或截图）</div>
-    <textarea id="resume-input" placeholder="直接 Ctrl+V 粘贴简历文字或截图；多份文字用一行 ===== 分隔"></textarea>
-    <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg" multiple style="display:none" onchange="handleFiles(this.files)">
-    <div class="upload-zone" onclick="document.getElementById('file-input').click()">
-      <div style="font-size:24px">📎</div>
-      <div>点击上传简历文件（PDF / Word / 图片 / 文本，可多选）</div>
-      <div class="hint" style="margin:0">每份文件 = 一位候选人，原样保留</div>
+  <div class="card acc">
+    <div class="acc-head" onclick="toggleCard(this)">
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">JD 能力拆解</span></span>
+      <span class="acc-actions" onclick="event.stopPropagation()">
+        <button class="btn-ghost btn-sm" onclick="aiAnalyzeJd()">AI 拆解</button>
+        <button class="btn-primary btn-sm" onclick="saveJdAnalysis()">保存</button>
+      </span>
     </div>
-    <div id="file-list"></div>
+    <div class="acc-body">
+      <div id="jd-analysis">
+        <div class="hint" style="margin:0">点击「AI 拆解」从岗位 JD 生成能力清单，生成后可自由编辑</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card acc" id="acc-interview">
+    <div class="acc-head" onclick="toggleCard(this)">
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">面试评估</span></span>
+      <span class="acc-actions" onclick="event.stopPropagation()">
+        <button class="btn-ghost btn-sm" onclick="aiSummarizeIv()">AI 汇总</button>
+        <button class="btn-primary btn-sm" onclick="saveInterview()">保存</button>
+      </span>
+    </div>
+    <div class="acc-body">
+      <div id="iv-bar" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <select id="iv-select" class="iv-sel" onchange="switchInterview()"></select>
+        <button class="btn-ghost btn-sm" onclick="newInterview()">＋ 新建评估</button>
+        <button id="iv-del-btn" class="btn-ghost btn-sm" onclick="delInterview()" style="margin-left:auto">删除</button>
+      </div>
+      <div id="iv-form">
+        <div class="hint" style="margin:0">点击「＋ 新建评估」记录面试打分，评估表会自动按 JD 能力拆解的三组标准生成</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card acc">
+    <div class="acc-head" onclick="toggleCard(this)">
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">粘贴简历（Ctrl+V 直接粘贴文字或截图）</span></span>
+    </div>
+    <div class="acc-body">
+      <textarea id="resume-input" placeholder="直接 Ctrl+V 粘贴简历文字或截图；多份文字用一行 ===== 分隔"></textarea>
+      <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg" multiple style="display:none" onchange="handleFiles(this.files)">
+      <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+        <div style="font-size:24px">📎</div>
+        <div>点击上传简历文件（PDF / Word / 图片 / 文本，可多选）</div>
+        <div class="hint" style="margin:0">每份文件 = 一位候选人，原样保留</div>
+      </div>
+      <div id="file-list"></div>
+    </div>
   </div>
 
   <button class="btn-primary" style="width:100%;padding:13px" onclick="startMatch()">开始匹配</button>
@@ -236,6 +317,10 @@
     <div class="label" style="margin-top:0">硬性条件对照</div>
     <div id="d-hardreq"></div>
     <div id="d-prev" style="margin:8px 0 0"></div>
+    <div id="d-std-wrap" style="display:none">
+      <div class="label">标准逐项对照</div>
+      <div id="d-std"></div>
+    </div>
     <div class="label">技能覆盖</div>
     <div id="d-covered"></div>
     <div class="label">技能缺口</div>
@@ -290,8 +375,16 @@
 <script src="lib/mammoth.browser.min.js"></script>
 <script>
 const $ = id=>document.getElementById(id);
+function toggleCard(head){
+  const card = head.closest('.acc');
+  const body = card && card.querySelector('.acc-body');
+  const arrow = head.querySelector('.acc-arrow');
+  if(!body) return;
+  const open = body.classList.toggle('open');
+  if(arrow) arrow.textContent = open ? '▾' : '▸';
+}
 
-let state = { currentJobId:null, currentBatchId:null, resumes:[], results:[], detailIndex:-1, mode:'', selectMode:false, selectIds:[] };
+let state = { currentJobId:null, currentBatchId:null, currentIvId:null, resumes:[], results:[], detailIndex:-1, mode:'', selectMode:false, selectIds:[] };
 let uploadedFiles = [];
 const DEFAULT_PROXY = '';
 
@@ -534,6 +627,8 @@ function openJob(id){
   $('job-jd-view').textContent = job.jd;
   toggleEditJd(false);
   renderHistory(job);
+  renderJdAnalysis(job);
+  renderInterviews(job);
   showPage('job');
 }
 
@@ -556,6 +651,336 @@ function saveJd(){
   $('job-jd-view').textContent = jd;
   toggleEditJd(false);
   toast('JD 已更新');
+}
+
+/* ===== JD 能力拆解 ===== */
+function curJob(){ return getJob(state.currentJobId); }
+async function analyzeJdApi(jd){
+  const enc = localStorage.getItem('deepseek_key_enc');
+  const key = enc ? atob(enc) : (localStorage.getItem('deepseek_key')||'');
+  if(!key) return null;
+  const prompt = '把这份岗位JD拆解成该岗位任职所需的能力清单，且只能拆成3个分组，分组名固定为：硬性标准、软性标准、判断标准。\n硬性标准：学历、工作年限、专业技能、工具掌握、证书等硬条件。\n软性标准：沟通表达、团队协作、抗压、责任心等软素质。\n判断标准：衡量候选人是否达标的具体观察点或判断依据（比如"能否举例说明自己用某工具完成过什么"）。\n每个能力用一句简洁短语描述，要具体、可判断（比如"熟练使用Excel数据透视表"而不是"会用Excel"）。\n\n【JD】\n'+jd+'\n\n只返回JSON，不要任何其他文字，格式：{"groups":[{"name":"分组名","items":["能力1","能力2"]}]}，必须用这3个固定分组名，每组2~6项。';
+  const payload = {
+    model:'deepseek-chat',
+    messages:[
+      {role:'system',content:'你是资深招聘顾问。只返回JSON，不要任何其他文字。'},
+      {role:'user',content:prompt}
+    ],
+    temperature:0.4,
+    response_format:{type:'json_object'}
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(()=>controller.abort(), 30000);
+  const resp = await fetch('https://api.deepseek.com/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body: JSON.stringify(payload),
+    signal: controller.signal
+  });
+  clearTimeout(timeout);
+  if(!resp.ok) throw new Error('DeepSeek 返回 '+resp.status);
+  const data = await resp.json();
+  const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if(!content) throw new Error('DeepSeek 返回为空');
+  const parsed = JSON.parse(content);
+  const groups = Array.isArray(parsed) ? parsed : (parsed.groups || []);
+  return groups.filter(g=>g && g.name).map(g=>({ name:String(g.name), items:(g.items||[]).map(String).filter(Boolean) }));
+}
+function localAnalyze(jd){
+  return [{ name:'能力要求', items: extractKeywords(jd) }];
+}
+async function aiAnalyzeJd(){
+  const job = curJob();
+  if(!job || !job.jd){ toast('先填写岗位 JD'); return; }
+  const box = $('jd-analysis');
+  box.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在拆解 JD…</div>';
+  try{
+    let groups = await analyzeJdApi(job.jd);
+    if(!groups) groups = localAnalyze(job.jd);
+    job.jdAnalysis = { groups };
+    const jobs = loadJobs();
+    const idx = jobs.findIndex(j=>j.id===job.id);
+    if(idx>=0){ jobs[idx]=job; saveJobs(jobs); }
+    renderJdAnalysis(job);
+    toast('拆解完成，可直接编辑');
+  }catch(e){
+    box.innerHTML = '<div class="hint" style="margin:0;color:var(--red)">拆解失败：'+escapeHtml(e.message||e)+'</div>';
+  }
+}
+function renderJdAnalysis(job){
+  const box = $('jd-analysis');
+  if(!box) return;
+  const groups = (job.jdAnalysis && job.jdAnalysis.groups) || [];
+  if(!groups.length){
+    box.innerHTML = '<div class="hint" style="margin:0">点击「AI 拆解」从岗位 JD 生成能力清单，生成后可自由编辑</div>';
+    return;
+  }
+  box.innerHTML = '<div class="ga-groups">'+groups.map(g=>'<div class="ga-group">'+
+    '<div class="ga-head"><input class="ga-name" value="'+escapeHtml(g.name)+'" placeholder="分组名">'+
+    '<button class="btn-ghost btn-sm" onclick="delJdGroup(this)">删除分组</button></div>'+
+    '<div class="ga-items">'+(g.items||[]).map(it=>'<div class="ga-row">'+
+      '<input class="ga-item" value="'+escapeHtml(it)+'" placeholder="能力项">'+
+      '<button class="btn-ghost btn-sm ga-del" onclick="delJdItem(this)">×</button></div>').join('')+'</div>'+
+    '<button class="btn-ghost btn-sm" onclick="addJdItem(this)">＋ 添加能力</button></div>').join('')+'</div>'+
+    '<div style="margin-top:12px"><button class="btn-ghost btn-sm" onclick="addJdGroup()">＋ 添加分组</button></div>';
+}
+function addJdItem(btn){
+  const gEl = btn.closest('.ga-group');
+  const row = document.createElement('div');
+  row.className = 'ga-row';
+  row.innerHTML = '<input class="ga-item" placeholder="能力项">'+
+    '<button class="btn-ghost btn-sm ga-del" onclick="delJdItem(this)">×</button>';
+  gEl.querySelector('.ga-items').appendChild(row);
+}
+function delJdItem(btn){ btn.closest('.ga-row').remove(); }
+function delJdGroup(btn){ btn.closest('.ga-group').remove(); }
+function addJdGroup(){
+  const g = document.createElement('div');
+  g.className = 'ga-group';
+  g.innerHTML = '<div class="ga-head"><input class="ga-name" placeholder="分组名">'+
+    '<button class="btn-ghost btn-sm" onclick="delJdGroup(this)">删除分组</button></div>'+
+    '<div class="ga-items"></div>'+
+    '<button class="btn-ghost btn-sm" onclick="addJdItem(this)">＋ 添加能力</button>';
+  $('jd-analysis').querySelector('.ga-groups').appendChild(g);
+}
+function saveJdAnalysis(){
+  const job = curJob();
+  if(!job) return;
+  const box = $('jd-analysis');
+  const groups = [...box.querySelectorAll('.ga-group')].map((gEl,gi)=>{
+    const name = (gEl.querySelector('.ga-name').value||'').trim();
+    const items = [...gEl.querySelectorAll('.ga-item')].map(i=>i.value.trim()).filter(Boolean);
+    return { name: name||('分组'+(gi+1)), items };
+  }).filter(g=>g.items.length);
+  if(!groups.length){ toast('还没有内容可保存'); return; }
+  job.jdAnalysis = { groups };
+  const jobs = loadJobs();
+  const idx = jobs.findIndex(j=>j.id===job.id);
+  if(idx>=0){ jobs[idx]=job; saveJobs(jobs); }
+  toast('已保存');
+}
+function getDeepSeekKey(){
+  const enc = localStorage.getItem('deepseek_key_enc');
+  return enc ? atob(enc) : (localStorage.getItem('deepseek_key')||'');
+}
+function persistJob(job){
+  const jobs = loadJobs();
+  const idx = jobs.findIndex(j=>j.id===job.id);
+  if(idx>=0){ jobs[idx]=job; saveJobs(jobs); }
+}
+let ivDraft = null;
+function curInterview(){ return ivDraft; }
+function renderInterviews(job){
+  const list = job.interviews || [];
+  const bar = $('iv-bar'), form = $('iv-form');
+  if(!bar) return;
+  $('iv-select').style.display = list.length ? '' : 'none';
+  $('iv-del-btn').style.display = list.length ? '' : 'none';
+  bar.style.display='flex';
+  if(!list.length){
+    ivDraft=null;
+    form.innerHTML = '<div class="hint" style="margin:0">点击「＋ 新建评估」记录面试打分，评估表会自动按 JD 能力拆解的三组标准生成</div>';
+    return;
+  }
+  if(!list.find(i=>i.id===state.currentIvId)) state.currentIvId = (list.find(i=>i.id===job.ivActive)||list[0]).id;
+  ivDraft = list.find(i=>i.id===state.currentIvId) || list[0];
+  $('iv-select').innerHTML = list.map(i=>'<option value="'+i.id+'"'+(i.id===ivDraft.id?' selected':'')+'>'+escapeHtml(i.name||('候选人'+(list.indexOf(i)+1)))+'</option>').join('');
+  renderInterviewForm();
+}
+function renderInterviewForm(){
+  if(!ivDraft){ $('iv-form').innerHTML=''; return; }
+  const gHtml = ivDraft.groups.map((g,gi)=>'<div class="iv-group">'+
+    '<div class="iv-gname">'+escapeHtml(g.name)+'</div>'+
+    g.items.map((it,ii)=>{
+      let chips;
+      if(it.judge){
+        chips = '<button type="button" class="iv-chip wide judge-y'+(it.score===1?' on':'')+'" data-v="1" onclick="ivScore(this,'+gi+','+ii+',1)">有证据</button>'+
+                '<button type="button" class="iv-chip wide judge-n'+(it.score===-1?' on':'')+'" data-v="-1" onclick="ivScore(this,'+gi+','+ii+',-1)">无证据</button>';
+      } else {
+        chips=[1,2,3,4,5].map(n=>'<button type="button" class="iv-chip'+(it.score===n?' on':'')+'" data-v="'+n+'" onclick="ivScore(this,'+gi+','+ii+','+n+')">'+n+'</button>').join('');
+      }
+      return '<div class="iv-item-row" data-g="'+gi+'" data-i="'+ii+'" data-v="'+(it.score||0)+'">'+
+        '<div class="iv-item-text">'+escapeHtml(it.t)+'</div>'+
+        '<div class="iv-chips">'+chips+'</div></div>';
+    }).join('')+'</div>').join('');
+  const concls=['通过','待定','不通过'];
+  const conclHtml = concls.map((c,ci)=>'<button type="button" class="btn-ghost btn-sm iv-concl-btn'+(ivDraft.conclusion===c?' on':'')+'" onclick="ivConclusion(this,'+ci+')">'+c+'</button>').join('');
+  $('iv-form').innerHTML =
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">'+
+      '<div class="label" style="margin:0">候选人</div>'+
+      '<input type="text" id="iv-name" value="'+escapeHtml(ivDraft.name)+'" placeholder="姓名">'+
+      '<input type="text" id="iv-date" value="'+escapeHtml(ivDraft.date)+'" placeholder="面试日期" style="flex:0 0 120px">'+
+    '</div>'+
+    gHtml+
+    '<div class="label">面试结论</div>'+
+    '<div class="iv-concl">'+conclHtml+'</div>'+
+    '<div class="label">备注</div>'+
+    '<textarea id="iv-note" placeholder="面试中想记的要点…">'+escapeHtml(ivDraft.note)+'</textarea>'+
+    (ivDraft.ai?'<div class="label" style="margin-top:12px">AI 汇总</div><div class="comment-box" id="iv-ai-box">'+escapeHtml(ivDraft.ai).replace(/\n/g,'<br>')+'</div>':'');
+}
+function ivScore(btn, gi, ii, v){
+  if(!ivDraft || !ivDraft.groups[gi] || !ivDraft.groups[gi].items[ii]) return;
+  const item = ivDraft.groups[gi].items[ii];
+  item.score = item.score===v ? 0 : v;
+  const row = btn.closest('.iv-item-row');
+  [...row.querySelectorAll('.iv-chip')].forEach(c=>c.classList.toggle('on', Number(c.dataset.v)===item.score));
+  row.dataset.v = item.score;
+}
+function ivConclusion(btn, ci){
+  if(!ivDraft) return;
+  const concls=['通过','待定','不通过'];
+  ivDraft.conclusion = ivDraft.conclusion===concls[ci] ? '' : concls[ci];
+  [...$('iv-form').querySelectorAll('.iv-concl-btn')].forEach(b=>b.classList.remove('on'));
+  if(ivDraft.conclusion) btn.classList.add('on');
+}
+function switchInterview(){
+  const v = Number($('iv-select').value);
+  state.currentIvId = v;
+  const job = curJob(); if(!job) return;
+  job.ivActive = v;
+  ivDraft = (job.interviews||[]).find(i=>i.id===v) || null;
+  renderInterviewForm();
+}
+function newInterview(){
+  const job = curJob(); if(!job) return;
+  const analysis = job.jdAnalysis && job.jdAnalysis.groups;
+  if(!analysis || !analysis.length){ toast('先做 JD 能力拆解，评估表会按拆出的三组标准生成'); return; }
+  const groups = analysis.map(g=>({ name:g.name, items:(g.items||[]).map(t=>({ t:String(t), score:0, judge:/判断/.test(g.name) })) }));
+  const iv = { id:Date.now(), name:'', date:fmtDate(Date.now()), conclusion:'', note:'', ai:'', groups };
+  if(!job.interviews) job.interviews=[];
+  job.interviews.push(iv);
+  job.ivActive = iv.id;
+  state.currentIvId = iv.id;
+  ivDraft = iv;
+  persistJob(job);
+  renderInterviews(job);
+  const nm=$('iv-name'); if(nm) nm.focus();
+}
+function delInterview(){
+  const job=curJob(); if(!job) return;
+  const list=job.interviews||[];
+  if(!list.length) return;
+  if(!confirm('删除这份面试评估？')) return;
+  job.interviews=list.filter(i=>i.id!==state.currentIvId);
+  job.ivActive = job.interviews.length ? job.interviews[job.interviews.length-1].id : null;
+  state.currentIvId = job.ivActive;
+  persistJob(job);
+  renderInterviews(job);
+}
+function openCard(cardEl){
+  if(!cardEl) return;
+  const body = cardEl.querySelector('.acc-body');
+  const arrow = cardEl.querySelector('.acc-arrow');
+  if(body) body.classList.add('open');
+  if(arrow) arrow.textContent = '▾';
+}
+function addToInterview(idx){
+  const r = state.results[idx];
+  const job = getJob(state.currentJobId);
+  if(!job || !r){ toast('候选人不存在'); return; }
+  const analysis = job.jdAnalysis && job.jdAnalysis.groups;
+  if(!analysis || !analysis.length){ toast('该岗位还没做 JD 能力拆解，先去拆解'); return; }
+  const groups = analysis.map(g=>({ name:g.name, items:(g.items||[]).map(t=>({ t:String(t), score:0, judge:/判断/.test(g.name) })) }));
+  const iv = {
+    id:Date.now(), name:r.name, date:fmtDate(Date.now()), conclusion:'', note:'', ai:'', groups,
+    source:{ score:r.score, comment:r.comment },
+    resumeText:(r.text||'').slice(0,2000)
+  };
+  if(!job.interviews) job.interviews=[];
+  job.interviews.push(iv);
+  job.ivActive = iv.id;
+  state.currentIvId = iv.id;
+  ivDraft = iv;
+  persistJob(job);
+  openJob(state.currentJobId);
+  const card = $('acc-interview');
+  openCard(card);
+  if(card && card.scrollIntoView) card.scrollIntoView({behavior:'smooth', block:'start'});
+  toast('已加入面试评估：'+r.name);
+}
+function saveInterview(){
+  if(!ivDraft){ toast('还没有评估'); return; }
+  ivDraft.name = ($('iv-name').value||'').trim() || '未命名候选人';
+  ivDraft.date = $('iv-date').value || fmtDate(Date.now());
+  ivDraft.note = $('iv-note').value || '';
+  const job = curJob(); if(!job) return;
+  if(!job.interviews) job.interviews=[];
+  const idx = job.interviews.findIndex(i=>i.id===ivDraft.id);
+  if(idx>=0) job.interviews[idx]=ivDraft; else job.interviews.push(ivDraft);
+  job.ivActive = ivDraft.id;
+  persistJob(job);
+  toast('已保存');
+}
+async function aiSummarizeIv(){
+  if(!ivDraft){ toast('还没有评估'); return; }
+  const hasScored = ivDraft.groups.some(g=>g.items.some(it=>it.score>0));
+  if(!hasScored){ toast('先给至少一项打分'); return; }
+  ivDraft.name = ($('iv-name').value||'').trim() || ivDraft.name || '未命名候选人';
+  ivDraft.note = $('iv-note').value || '';
+  const oldBox = $('iv-ai-box'); if(oldBox) oldBox.remove();
+  const box = document.createElement('div');
+  box.id = 'iv-ai-box'; box.className='comment-box';
+  box.innerHTML = '<div class="loading"><div class="spinner"></div>AI 正在汇总…</div>';
+  $('iv-form').appendChild(box);
+  try{
+    const groups = ivDraft.groups.map(g=>({ name:g.name, items:g.items.map(it=>({ t:it.t, score:it.score, judge:it.judge })) }));
+    const text = getDeepSeekKey() ? await summarizeIvApi(groups, ivDraft) : localIvSummary(groups);
+    ivDraft.ai = text;
+    box.innerHTML = escapeHtml(text).replace(/\n/g,'<br>');
+    saveInterview();
+    toast('汇总完成');
+  }catch(e){
+    box.innerHTML = '<div class="hint" style="margin:0;color:var(--red)">汇总失败：'+escapeHtml(e.message||e)+'</div>';
+  }
+}
+async function summarizeIvApi(groups, iv){
+  const lines = groups.map(g=>{
+    const scoreItems = g.items.filter(it=>!it.judge);
+    const judgeItems = g.items.filter(it=>it.judge);
+    let line = g.name;
+    if(scoreItems.length){
+      const scored = scoreItems.filter(it=>it.score>0);
+      const avg = scored.length ? (scored.reduce((a,b)=>a+b.score,0)/scored.length).toFixed(1) : '-';
+      line += '（平均'+avg+'分）：'+scoreItems.map(it=>'['+it.score+'分] '+it.t).join('；');
+    }
+    if(judgeItems.length){
+      line += (scoreItems.length?' ':'')+'判断证据：'+judgeItems.map(it=>it.t+'='+(it.score===1?'有证据':it.score===-1?'无证据':'未评')).join('；');
+    }
+    return line;
+  }).join('\n');
+  const prompt = '你是资深面试官。以下是一份岗位面试评估记录（硬性/软性标准评分1~5，0=未评；判断标准为有证据/无证据）：\n候选人：'+iv.name+'\n'+lines+'\n面试结论：'+(iv.conclusion||'未选')+'\n备注：'+(iv.note||'无')+'\n\n请输出面试汇总，包括：1) 综合评语（3~4句，具体到各标准的实际表现，别只说"表现不错"这种空话）2) 亮点与风险点 3) 明确建议：通过 / 待定 / 不通过，并给一句话理由。';
+  const payload = { model:'deepseek-chat', messages:[{role:'system',content:'你是资深招聘顾问，点评要具体、客观、可直接采用。'},{role:'user',content:prompt}], temperature:0.4 };
+  const controller=new AbortController(); const t=setTimeout(()=>controller.abort(),30000);
+  const resp=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getDeepSeekKey()},body:JSON.stringify(payload),signal:controller.signal});
+  clearTimeout(t);
+  if(!resp.ok) throw new Error('DeepSeek 返回 '+resp.status);
+  const data=await resp.json();
+  const c=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
+  if(!c) throw new Error('DeepSeek 返回为空');
+  return c.trim();
+}
+function localIvSummary(groups){
+  const rows = groups.map(g=>{
+    const scoreItems=g.items.filter(it=>!it.judge);
+    const judgeItems=g.items.filter(it=>it.judge);
+    if(judgeItems.length && !scoreItems.length){
+      const has=judgeItems.filter(it=>it.score===1).length;
+      const none=judgeItems.filter(it=>it.score===-1).length;
+      const rest=judgeItems.length-has-none;
+      return g.name+'：有证据 '+has+' · 无证据 '+none+(rest?' · 未评 '+rest:'');
+    }
+    const scored=scoreItems.filter(it=>it.score>0);
+    const avg=scored.length?(scored.reduce((a,b)=>a+b.score,0)/scored.length).toFixed(1):'未评';
+    let line=g.name+'：'+avg+' 分（已评 '+scored.length+'/'+scoreItems.length+' 项）';
+    if(judgeItems.length){
+      const has=judgeItems.filter(it=>it.score===1).length;
+      line+=' · 有证据 '+has+'/'+judgeItems.length;
+    }
+    return line;
+  });
+  const all=groups.flatMap(g=>g.items).filter(it=>!it.judge && it.score>0);
+  const total=all.length?(all.reduce((a,b)=>a+b.score,0)/all.length).toFixed(1):'0';
+  return '综合评分 '+total+' / 5\n'+rows.join('\n')+'\n（本地演示模式。配置 DeepSeek Key 后点「AI 汇总」可生成详细评语和建议）';
 }
 function renderHistory(job){
   const box = $('history-list');
@@ -623,6 +1048,14 @@ function parseResumes(text){
     const name = extractName(r) || ('候选人'+(i+1));
     return { name, text:r };
   });
+}
+function extractContact(text){
+  const t = text||'';
+  const email = t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  if(email) return 'e:'+email[0].toLowerCase();
+  const phone = t.match(/1[3-9]\d{9}/);
+  if(phone) return 'p:'+phone[0];
+  return '';
 }
 
 /* ===== 文件上传 / 粘贴截图 ===== */
@@ -732,25 +1165,30 @@ async function startMatch(){
   const hasApi = localStorage.getItem('proxy_url') || localStorage.getItem('deepseek_key_enc') || localStorage.getItem('deepseek_key');
   if(hasApi){
     try{
-      results = await callDeepSeek(job.jd, resumes);
+      results = await callDeepSeek(job.jd, resumes, job.jdAnalysis && job.jdAnalysis.groups);
       if(results) mode = 'DeepSeek';
     }catch(e){ results = null; }
   }
-  if(!results){ results = resumes.map(r=>mockScore(r, job.jd)); mode = '演示'; }
+  if(!results){ results = resumes.map(r=>mockScore(r, job.jd, job.jdAnalysis)); mode = '演示'; }
   state.mode = mode;
 
   state.results = results.map((r,i)=>{
+    const text = resumes[i]?.text || '';
     return {
       name: r.name || resumes[i]?.name || ('候选人'+(i+1)),
       score: Number(r.score)||0,
       covered: r.covered||[],
       missing: r.missing||[],
+      hard: r.hard||[],
+      soft: r.soft||[],
+      judge: r.judge||[],
       comment: r.comment||'暂无点评',
       evidence: r.evidence||'',
       status: '',
       viewed: false,
-      hardReq: buildHardReq(job.jd, resumes[i]?.text || ''),
-      text: resumes[i]?.text || '',
+      hardReq: buildHardReq(job.jd, text),
+      candidateId: extractContact(text),
+      text: text,
       dataUrl: resumes[i]?.dataUrl || '',
       fileType: resumes[i]?.fileType || ''
     };
@@ -761,7 +1199,9 @@ async function startMatch(){
     id:uid(), createdAt:Date.now(), mode: mode,
     results: state.results.map(r=>({
       name: r.name, score: r.score, covered: r.covered, missing: r.missing,
+      hard: r.hard||[], soft: r.soft||[], judge: r.judge||[],
       comment: r.comment, evidence: r.evidence||'', status: r.status||'', viewed: r.viewed===false?false:true, hardReq: r.hardReq||[],
+      candidateId: r.candidateId||'',
       text: (r.text||'').slice(0,2000), fileType: r.fileType
     }))
   };
@@ -791,7 +1231,7 @@ function updateModeBar(){
   const bar = $('mode-bar');
   if(state.mode === '演示'){
     bar.style.display = 'block';
-    bar.innerHTML = '💡 演示模式：内置关键词评分，无需网络。可在「设置」中配置 DeepSeek API 获取更精准的 AI 打分。';
+    bar.innerHTML = '⚠️ 演示模式：内置关键词短语匹配，分数仅供参考、可能误判，勿直接作为筛选依据。可在「设置」中配置 DeepSeek API 获取基于三组标准的 AI 打分。';
   } else {
     bar.style.display = 'none';
     bar.innerHTML = '';
@@ -838,15 +1278,19 @@ function setCandStatus(idx, status){
 }
 
 /* ===== 批次间候选人去重 ===== */
-function findPrevAppearances(name){
-  if(!name || !state.currentBatchId) return [];
+function findPrevAppearances(cand){
+  const name = cand && cand.name;
+  const cid = cand && cand.candidateId;
+  if((!name && !cid) || !state.currentBatchId) return [];
   const job = getJob(state.currentJobId);
   if(!job) return [];
   const prev = (job.batches||[]).filter(b=>b.id!==state.currentBatchId).reverse();
   const hits = [];
   for(const b of prev){
     for(const r of (b.results||[])){
-      if(r.name === name){
+      // 有唯一标识（邮箱/手机）就只按标识匹配，避免同名混淆；没有才退回姓名
+      const match = cid ? (r.candidateId===cid) : (r.name===name);
+      if(match){
         hits.push({time:fmtDate(b.createdAt), score:r.score, status:r.status||''});
         break;
       }
@@ -868,6 +1312,7 @@ function candCard(r, idx){
     '<div class="judge-comment">'+escapeHtml(r.comment)+'</div>'+
     prevAppearHtml(r)+
     hardReqRow(r)+
+    stdSummary(r)+
     '<div class="status-bar">'+
       '<button class="btn-sm '+(r.status==='push'?'btn-primary':'btn-ghost')+'" onclick="event.stopPropagation();setCandStatus('+idx+',\'push\')">🔥 推进</button>'+
       '<button class="btn-sm '+(r.status==='pass'?'btn-red':'btn-ghost')+'" onclick="event.stopPropagation();setCandStatus('+idx+',\'pass\')">❌ 淘汰</button>'+
@@ -884,8 +1329,36 @@ function hardReqRow(r){
   }).join('');
   return '<div class="hard-req">'+tags+'</div>';
 }
+function stdGroups(r){
+  return [
+    { name:'硬性标准', rows:r.hard },
+    { name:'软性标准', rows:r.soft },
+    { name:'判断标准', rows:r.judge }
+  ].filter(g=>g.rows && g.rows.length);
+}
+function stdSummary(r){
+  const groups = stdGroups(r);
+  if(!groups.length) return '';
+  const chips = groups.map(g=>{
+    const hit = g.rows.filter(x=>x.hit).length;
+    return '<span class="std-chip">'+escapeHtml(g.name)+' '+hit+'/'+g.rows.length+'</span>';
+  }).join('');
+  return '<div class="std-summary">'+chips+'</div>';
+}
+function stdDetailHtml(r){
+  const groups = stdGroups(r);
+  if(!groups.length) return '';
+  return groups.map(g=>{
+    const body = g.rows.map(row=>{
+      const mark = row.hit ? '<span class="std-hit">✓</span>' : '<span class="std-miss">✗</span>';
+      const note = row.note ? ' <span class="std-note">（'+escapeHtml(row.note)+'）</span>' : '';
+      return '<div class="std-row">'+mark+'<span class="std-item">'+escapeHtml(row.item)+note+'</span></div>';
+    }).join('');
+    return '<div class="std-grp"><div class="std-grp-name">'+escapeHtml(g.name)+'</div>'+body+'</div>';
+  }).join('');
+}
 function prevAppearHtml(r){
-  const hits = findPrevAppearances(r.name);
+  const hits = findPrevAppearances(r);
   if(!hits.length) return '';
   return '<div class="prev-appear">🔄 历史出现：'+hits.map(h=>h.time+'（'+h.score+'分'+statusBrief(h.status)+'）').join(' → ')+'</div>';
 }
@@ -928,9 +1401,13 @@ function openDetail(idx){
   $('d-status-bar').innerHTML =
     '<button class="btn-sm '+(r.status==='push'?'btn-primary':'btn-ghost')+'" onclick="setCandStatus('+idx+',\'push\');openDetail('+idx+')">🔥 推进</button>'+
     '<button class="btn-sm '+(r.status==='pass'?'btn-red':'btn-ghost')+'" onclick="setCandStatus('+idx+',\'pass\');openDetail('+idx+')">❌ 淘汰</button>'+
-    (r.status ? '<button class="btn-sm btn-ghost" onclick="setCandStatus('+idx+',\'\');openDetail('+idx+')">↩ 重置</button>' : '');
+    (r.status ? '<button class="btn-sm btn-ghost" onclick="setCandStatus('+idx+',\'\');openDetail('+idx+')">↩ 重置</button>' : '')+
+    '<button class="btn-sm btn-ghost" onclick="addToInterview('+idx+')">📋 加入面试</button>';
   $('d-hardreq').innerHTML = hardReqRow(r) || '<span class="sub">未提取到硬性条件</span>';
   $('d-prev').innerHTML = prevAppearHtml(r) || '';
+  const stdHtml = stdDetailHtml(r);
+  $('d-std-wrap').style.display = stdHtml ? 'block' : 'none';
+  $('d-std').innerHTML = stdHtml;
   $('d-covered').innerHTML = r.covered.map(s=>'<span class="ok-tag">'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无</span>';
   $('d-missing').innerHTML = r.missing.map(s=>'<span class="gap-tag">缺：'+escapeHtml(s)+'</span>').join('') || '<span class="sub">无明显缺口</span>';
   $('d-evidence').textContent = r.evidence || '暂无具体证据';
@@ -1010,7 +1487,7 @@ function importData(files){
 }
 
 /* ===== DeepSeek 调用 ===== */
-async function callDeepSeek(jd, resumes){
+async function callDeepSeek(jd, resumes, standards){
   const enc = localStorage.getItem('deepseek_key_enc');
   const key = enc ? atob(enc) : (localStorage.getItem('deepseek_key')||'');
   let proxyUrl = localStorage.getItem('proxy_url');
@@ -1022,7 +1499,7 @@ async function callDeepSeek(jd, resumes){
     proxyUrl = '';
   }
   if(!proxyUrl && !key) return null;
-  const prompt = buildPrompt(jd, resumes);
+  const prompt = buildPrompt(jd, resumes, standards);
   const payload = {
     model:'deepseek-chat',
     messages:[
@@ -1051,9 +1528,23 @@ async function callDeepSeek(jd, resumes){
   const arr = Array.isArray(parsed) ? parsed : (parsed.results || []);
   return arr;
 }
-function buildPrompt(jd, resumes){
+function buildPrompt(jd, resumes, standards){
   const resumeBlock = resumes.map((r,i)=>(i+1)+'. '+r.name+'：\n'+r.text).join('\n\n');
-  return '请为以下岗位JD评估候选人的技能匹配度。\n\n【岗位JD】\n'+jd+'\n\n【候选人简历】\n'+resumeBlock+'\n\n请返回JSON对象，格式：{"results":[{"name":"姓名","score":85,"covered":["已具备技能"],"missing":["缺失技能"],"evidence":"凭什么行：几年相关经验、做过什么项目（一句话，可空字符串）","comment":"一句话中文点评（优势+缺口+建议）"}]}\n评分标准：综合技能覆盖度和相关经验。comment要口语化，像HR说的话。evidence要具体（如\"5年AIGC抽卡经验，做过XX漫剧项目\"）。';
+  let stdPart = '';
+  if(standards && standards.length){
+    stdPart = '【评价标准】（必须逐项对照，这是打分的唯一依据）\n'+standards.map(g=>{
+      const items = (g.items||[]).map(it=>typeof it==='string'?it:it.t).filter(Boolean);
+      if(!items.length) return '';
+      return g.name+'：\n'+items.map((it,i)=>(i+1)+'. '+it).join('\n');
+    }).filter(Boolean).join('\n\n')+'\n\n';
+  }
+  return '你是资深招聘顾问，请评估候选人与岗位的匹配度。\n\n【岗位JD】\n'+jd+'\n\n'+stdPart+'【候选人简历】\n'+resumeBlock+'\n\n'
+    +'请返回JSON对象，格式：{"results":[{"name":"姓名","score":0,"hard":[{"item":"硬性标准原文","hit":true,"note":"依据"}],"soft":[{"item":"软性标准原文","hit":true,"note":"依据"}],"judge":[{"item":"判断标准原文","hit":true}],"covered":["已具备技能"],"missing":["缺失技能"],"evidence":"凭简历原文能证明的经验/项目","comment":"一句话中文点评"}]}\n'
+    +'评分规则：\n'
+    +'1. 若提供了【评价标准】，hard/soft/judge 必须逐项对照每一条标准：硬性标准 hit=简历是否满足；软性标准 hit=简历有无相关线索；判断标准 hit=简历有无证据支撑。note 只能引用简历原文，找不到就写"未提及"，禁止推测。\n'
+    +'2. score 是综合分（0-100），必须能被 hard/soft/judge 的命中情况解释。\n'
+    +'3. evidence 只能写简历原文里真实存在的信息，简历没写的一律写空字符串，不推测、不补全、不编造。\n'
+    +'4. comment 要口语化、像HR说的话，具体到简历实际内容，不要空话。';
 }
 
 /* ===== 演示模式（mock，通用岗位） ===== */
@@ -1066,7 +1557,7 @@ function extractKeywords(text){
     .filter(s=>!STOP_WORDS.includes(s));
   return [...new Set(parts)].slice(0,30);
 }
-function mockScore(resume, jdText){
+function mockScore(resume, jdText, jdAnalysis){
   const tokens = extractKeywords(jdText);
   const content = resume.text;
   const covered = tokens.filter(t=>content.includes(t));
@@ -1100,7 +1591,31 @@ function mockScore(resume, jdText){
   if(hasProject) comment += '，有项目经历';
   if(!comment) comment = '简历内容较少，建议补充';
   comment += '，仅供参考。';
-  return { name: resume.name, score, covered, missing, evidence, comment };
+  // 三组标准逐项对照（演示模式粗略短语匹配）
+  const hard=[], soft=[], judge=[];
+  const groups = jdAnalysis && jdAnalysis.groups;
+  if(groups){
+    groups.forEach(g=>{
+      const name = g.name||'';
+      const isSoft = /软/.test(name);
+      const items = (g.items||[]).map(it=>typeof it==='string'?it:it.t).filter(Boolean);
+      const rows = items.map(it=>{
+        let hit;
+        if(isSoft){
+          // 软性标准措辞差异大，取核心词（去后缀）做宽松子串匹配
+          const core = String(it).replace(/能力|素质|意识|精神|态度|水平/g,'').slice(0,2);
+          hit = !!core && content.includes(core);
+        } else {
+          hit = content.includes(it);
+        }
+        return { item: it, hit, note: hit?'简历提及':'未提及' };
+      });
+      if(/硬/.test(name)) hard.push(...rows);
+      else if(isSoft) soft.push(...rows);
+      else if(/判断/.test(name)) judge.push(...rows);
+    });
+  }
+  return { name: resume.name, score, covered, missing, evidence, comment, hard, soft, judge };
 }
 
 /* ===== JD 硬条件对照（学历/年限/技能，独立于 AI 的可解释清单） ===== */
@@ -1111,38 +1626,36 @@ function extractHardReq(jd){
   else if(/硕士|研究生/.test(jd)) edu='硕士';
   else if(/本科/.test(jd)) edu='本科';
   else if(/大专|专科/.test(jd)) edu='大专';
-  if(edu) reqs.push({type:'edu', label:'学历：'+edu, value:edu});
+  if(edu) reqs.push({type:'edu', label:'学历：'+edu+'及以上', value:edu});
   const y = jd.match(/(\d+)\s*年/);
   if(y) reqs.push({type:'exp', label:y[1]+'年以上经验', value:+y[1]});
   extractKeywords(jd).filter(s=>s.length>=2).slice(0,4).forEach(s=>reqs.push({type:'skill', label:'技能：'+s, value:s}));
   return reqs;
 }
 function checkHardReq(req, text){
+  const t = text||'';
   if(req.type==='edu'){
     const rank={'大专':1,'本科':2,'硕士':3,'博士':4};
+    const norm = t.replace(/研究生/g,'硕士');
     for(const k of Object.keys(rank)){
-      if(text.indexOf(k)>=0 && rank[k]>=rank[req.value]){
-        // 排除「本科在读」「本科以下」等虚假匹配
-        const idx = text.indexOf(k);
-        const after = text.slice(idx + k.length, idx + k.length + 6);
-        if(after.indexOf('在读')>=0 || after.indexOf('以下')>=0 || after.indexOf('以内')>=0) continue;
+      if(norm.indexOf(k)>=0 && rank[k]>=rank[req.value]){
+        const idx = norm.indexOf(k);
+        const after = norm.slice(idx + k.length, idx + k.length + 8);
+        if(/在读|以下|以内|未毕业|在读生/.test(after)) continue;
         return true;
       }
     }
     return false;
   }
   if(req.type==='exp'){
-    const years = (text.match(/(\d+)\s*年/g)||[]).map(s=>parseInt(s)).filter(n=>n>=1&&n<=40);
-    // 排除「X年以下」「X年以内」
-    const validYears = years.filter(y=>{
-      const idx = text.indexOf(y+'年');
-      if(idx<0) return false;
-      const after = text.slice(idx + (y+'年').length, idx + (y+'年').length + 6);
-      return after.indexOf('以下')<0 && after.indexOf('以内')<0;
-    });
-    return validYears.some(n=>n>=req.value);
+    // 排除年份(19xx/20xx)，取工作年限最大值判断
+    const years = (t.match(/(\d+)\s*年/g)||[])
+      .map(s=>parseInt(s))
+      .filter(n=>n>=1 && n<=40);
+    if(!years.length) return false;
+    return Math.max(...years)>=req.value;
   }
-  return text.indexOf(req.value)>=0;
+  return t.indexOf(req.value)>=0;
 }
 function buildHardReq(jd, text){
   return extractHardReq(jd).map(q=>({label:q.label, hit:checkHardReq(q, text||'')}));
