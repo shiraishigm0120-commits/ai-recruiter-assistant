@@ -1,0 +1,12 @@
+{
+  "envId": "ai-recruit-d1guqh8a95b2dcbb9",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "user",
+      "timeout": 10,
+      "runtime": "Nodejs20.19",
+      "handler": "index.main"
+    }
+  ]
+}

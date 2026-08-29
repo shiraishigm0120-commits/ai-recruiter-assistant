@@ -162,6 +162,7 @@
 <div class="nav">
   <div class="logo">AI招聘助手 <span style="font-size:11px;color:var(--muted);font-weight:400">v2.1</span></div>
   <div class="nav-actions">
+    <button class="btn-ghost btn-sm" id="nav-account-btn" onclick="onAccountClick()">登录</button>
     <button class="btn-ghost btn-sm" onclick="openSettings()">⚙ 设置</button>
     <button class="btn-primary btn-sm" onclick="goNew()">+ 新建岗位</button>
     <button class="btn-ghost btn-sm" onclick="showDebug()" style="opacity:.5">调试</button>
@@ -343,6 +344,12 @@
     <div class="label">DeepSeek API Key（直连用，可选）</div>
     <input type="text" id="key-input" placeholder="sk-…">
     <div class="hint">都不填则用内置演示模式打分，无需网络，打开即用。</div>
+    <div class="label">账号</div>
+    <div class="hint" id="account-user" style="margin:0 0 8px">未登录</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn-ghost btn-sm" style="flex:1" onclick="showLogin()">登录 / 注册</button>
+      <button class="btn-red btn-sm" style="flex:1" onclick="doLogout()">退出登录</button>
+    </div>
     <div class="label">使用统计</div>
     <div class="hint" id="stats-text" style="margin:0 0 10px"></div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -356,6 +363,24 @@
       <button class="btn-primary" style="flex:1" onclick="saveSettings()">保存</button>
       <button class="btn-ghost" onclick="closeSettings()">取消</button>
     </div>
+  </div>
+</div>
+
+<!-- 登录弹窗 -->
+<div class="modal-bg" id="modal-login">
+  <div class="modal">
+    <h3>登录 / 注册</h3>
+    <div class="hint" style="margin:0 0 12px">登录后，岗位和筛选数据自动同步到云端，换电脑也能接着用。DeepSeek Key 仍只存本机，不上传。</div>
+    <div class="label" style="margin-top:0">用户名</div>
+    <input type="text" id="login-user" placeholder="2-32位字母/数字/_/-" autocomplete="username">
+    <div class="label">密码</div>
+    <input type="password" id="login-pass" placeholder="6-64位" autocomplete="current-password">
+    <div class="hint" id="login-error" style="color:#dc2626;margin:0 0 10px;min-height:18px"></div>
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+      <button class="btn-primary" style="flex:1" id="login-submit" onclick="doLogin()">登录</button>
+      <button class="btn-ghost" style="flex:1" id="register-submit" onclick="doRegister()">注册</button>
+    </div>
+    <a href="javascript:void(0)" onclick="hideLogin()" style="font-size:13px;color:var(--muted)">暂不登录，先离线使用</a>
   </div>
 </div>
 
@@ -373,6 +398,7 @@
 <script src="lib/pdf.min.js"></script>
 <script src="lib/tesseract.min.js"></script>
 <script src="lib/mammoth.browser.min.js"></script>
+<script src="lib/cloudbase.full.js"></script>
 <script>
 const $ = id=>document.getElementById(id);
 function toggleCard(head){
@@ -393,6 +419,8 @@ function loadJobs(){ return JSON.parse(localStorage.getItem('jobs')||'[]'); }
 function saveJobs(jobs){
   try{
     localStorage.setItem('jobs', JSON.stringify(jobs));
+    localStorage.setItem('jobs_updated_at', String(Date.now()));
+    debouncedSyncPush();
   }catch(e){
     toast('存储空间不足，最早的历史记录可能未保存');
   }
@@ -1681,8 +1709,178 @@ document.addEventListener('paste', function(e){
   if(files.length){ e.preventDefault(); handleFiles(files); }
 });
 
+/* ===== 账号 + 云端同步 ===== */
+const CLOUD_ENV = 'ai-recruit-d1guqh8a95b2dcbb9';
+let app = null;
+let cloudReadyPromise = null;
+let syncTimer = null;
+
+function getToken(){ return localStorage.getItem('session_token')||''; }
+function getUsername(){ return localStorage.getItem('session_user')||''; }
+function isLoggedIn(){ return !!getToken(); }
+
+function initCloud(){
+  if(cloudReadyPromise) return cloudReadyPromise;
+  cloudReadyPromise = (async ()=>{
+    try{
+      app = cloudbase.init({ env: CLOUD_ENV });
+      await app.auth().signInAnonymously();
+    }catch(e){
+      console.warn('云端初始化失败', e);
+    }
+  })();
+  return cloudReadyPromise;
+}
+
+async function callUser(action, payload){
+  await cloudReadyPromise;
+  if(!app) throw new Error('云服务未初始化');
+  const res = await app.callFunction({ name: 'user', data: Object.assign({ action }, payload||{}) });
+  return res && res.result;
+}
+
+function showLogin(){ $('modal-login').classList.add('show'); }
+function hideLogin(){ $('modal-login').classList.remove('show'); }
+function onAccountClick(){ if(isLoggedIn()) openSettings(); else showLogin(); }
+
+function updateAccountUI(){
+  const u = getUsername();
+  const btn = $('nav-account-btn');
+  if(btn) btn.textContent = u ? ('👤 '+u) : '登录';
+  const acc = $('account-user');
+  if(acc) acc.textContent = u ? ('已登录：'+u) : '未登录';
+}
+
+async function doLogin(){
+  const username = $('login-user').value.trim();
+  const password = $('login-pass').value;
+  const btn = $('login-submit');
+  btn.disabled = true; btn.textContent = '登录中…';
+  $('login-error').textContent = '';
+  try{
+    const r = await callUser('login', { username, password });
+    if(r && r.ok){
+      localStorage.setItem('session_token', r.token);
+      localStorage.setItem('session_user', r.username);
+      hideLogin();
+      updateAccountUI();
+      await syncReconcile();
+      toast('已登录：'+r.username);
+    } else {
+      $('login-error').textContent = (r && r.err) || '登录失败';
+    }
+  }catch(e){
+    $('login-error').textContent = '云服务异常：'+e.message;
+  }finally{
+    btn.disabled = false; btn.textContent = '登录';
+  }
+}
+
+async function doRegister(){
+  const username = $('login-user').value.trim();
+  const password = $('login-pass').value;
+  const btn = $('register-submit');
+  btn.disabled = true; btn.textContent = '注册中…';
+  $('login-error').textContent = '';
+  try{
+    const r = await callUser('register', { username, password });
+    if(r && r.ok){
+      const l = await callUser('login', { username, password });
+      if(l && l.ok){
+        localStorage.setItem('session_token', l.token);
+        localStorage.setItem('session_user', l.username);
+        hideLogin();
+        updateAccountUI();
+        await syncReconcile();
+        toast('注册成功，已登录：'+l.username);
+      } else {
+        $('login-error').textContent = '注册成功，请手动登录';
+      }
+    } else {
+      $('login-error').textContent = (r && r.err) || '注册失败';
+    }
+  }catch(e){
+    $('login-error').textContent = '云服务异常：'+e.message;
+  }finally{
+    btn.disabled = false; btn.textContent = '注册';
+  }
+}
+
+async function doLogout(){
+  const token = getToken();
+  localStorage.removeItem('session_token');
+  localStorage.removeItem('session_user');
+  updateAccountUI();
+  if(token){ callUser('logout', { token }).catch(()=>{}); }
+  toast('已退出登录');
+}
+
+function jobsUpdatedAt(){ return parseInt(localStorage.getItem('jobs_updated_at')||'0', 10)||0; }
+
+function debouncedSyncPush(){
+  if(!isLoggedIn()) return;
+  if(syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncPush, 2000);
+}
+
+async function syncPush(){
+  const token = getToken();
+  if(!token) return;
+  try{
+    await callUser('push', { token, jobs: loadJobs(), updatedAt: jobsUpdatedAt() });
+  }catch(e){ /* 静默失败，下次再推 */ }
+}
+
+async function syncReconcile(){
+  const token = getToken();
+  if(!token) return;
+  try{
+    const r = await callUser('pull', { token });
+    if(!r || !r.ok) return;
+    const cloudJobs = r.jobs || [];
+    const cloudAt = r.updatedAt || 0;
+    const localJobs = loadJobs();
+    const localAt = jobsUpdatedAt();
+    if(cloudJobs.length === 0 && localJobs.length > 0){
+      await syncPush();
+    } else if(localJobs.length === 0 && cloudJobs.length > 0){
+      localStorage.setItem('jobs', JSON.stringify(cloudJobs));
+      localStorage.setItem('jobs_updated_at', String(cloudAt));
+      renderJobs();
+    } else if(cloudJobs.length > 0 && localJobs.length > 0){
+      if(cloudAt > localAt){
+        localStorage.setItem('jobs', JSON.stringify(cloudJobs));
+        localStorage.setItem('jobs_updated_at', String(cloudAt));
+        renderJobs();
+      } else {
+        await syncPush();
+      }
+    }
+  }catch(e){ /* 静默失败 */ }
+}
+
+function initAuth(){
+  initCloud();
+  updateAccountUI();
+  const token = getToken();
+  if(token){
+    callUser('me', { token }).then(r=>{
+      if(r && r.ok){ syncReconcile(); }
+      else {
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('session_user');
+        updateAccountUI();
+        showLogin();
+      }
+    }).catch(()=>{});
+  } else {
+    showLogin();
+  }
+}
+
 trackVisit();
 renderJobs();
+initAuth();
 console.log('AI招聘助手 v2.1 loaded');
 </script>
 </body>
