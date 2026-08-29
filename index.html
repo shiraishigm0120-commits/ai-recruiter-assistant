@@ -1120,7 +1120,11 @@ async function extractPdfText(file){
   return text;
 }
 async function extractImageText(file){
-  const result = await Tesseract.recognize(file, 'chi_sim+eng');
+  const result = await Tesseract.recognize(file, 'chi_sim+eng', {
+    workerPath: 'lib/worker.min.js',
+    corePath: 'lib/core/',
+    langPath: 'lib/lang/'
+  });
   return result.data.text;
 }
 async function extractDocxText(file){
