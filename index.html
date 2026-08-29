@@ -398,7 +398,6 @@
 <script src="lib/pdf.min.js"></script>
 <script src="lib/tesseract.min.js"></script>
 <script src="lib/mammoth.browser.min.js"></script>
-<script src="lib/cloudbase.full.js"></script>
 <script>
 const $ = id=>document.getElementById(id);
 function toggleCard(head){
@@ -1710,33 +1709,29 @@ document.addEventListener('paste', function(e){
 });
 
 /* ===== 账号 + 云端同步 ===== */
-const CLOUD_ENV = 'ai-recruit-d1guqh8a95b2dcbb9';
-let app = null;
-let cloudReadyPromise = null;
+const CLOUD_FN_URL = 'https://ai-recruit-d1guqh8a95b2dcbb9-1477498882.ap-shanghai.app.tcloudbase.com/user';
 let syncTimer = null;
 
 function getToken(){ return localStorage.getItem('session_token')||''; }
 function getUsername(){ return localStorage.getItem('session_user')||''; }
 function isLoggedIn(){ return !!getToken(); }
 
-function initCloud(){
-  if(cloudReadyPromise) return cloudReadyPromise;
-  cloudReadyPromise = (async ()=>{
-    try{
-      app = cloudbase.init({ env: CLOUD_ENV });
-      await app.auth().signInAnonymously();
-    }catch(e){
-      console.warn('云端初始化失败', e);
-    }
-  })();
-  return cloudReadyPromise;
+function errText(e){
+  if(!e) return '未知错误';
+  if(typeof e === 'string') return e;
+  return e.errMsg || e.message || e.error || e.error_description || (e.code ? ('错误码 '+e.code) : JSON.stringify(e));
 }
 
 async function callUser(action, payload){
-  await cloudReadyPromise;
-  if(!app) throw new Error('云服务未初始化');
-  const res = await app.callFunction({ name: 'user', data: Object.assign({ action }, payload||{}) });
-  return res && res.result;
+  const res = await fetch(CLOUD_FN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ action }, payload||{}))
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  console.log('[callUser]', action, '→', data);
+  return data;
 }
 
 function showLogin(){ $('modal-login').classList.add('show'); }
@@ -1770,7 +1765,8 @@ async function doLogin(){
       $('login-error').textContent = (r && r.err) || '登录失败';
     }
   }catch(e){
-    $('login-error').textContent = '云服务异常：'+e.message;
+    console.error('[login]', e);
+    $('login-error').textContent = '云服务异常：'+errText(e);
   }finally{
     btn.disabled = false; btn.textContent = '登录';
   }
@@ -1800,7 +1796,8 @@ async function doRegister(){
       $('login-error').textContent = (r && r.err) || '注册失败';
     }
   }catch(e){
-    $('login-error').textContent = '云服务异常：'+e.message;
+    console.error('[register]', e);
+    $('login-error').textContent = '云服务异常：'+errText(e);
   }finally{
     btn.disabled = false; btn.textContent = '注册';
   }
@@ -1860,7 +1857,6 @@ async function syncReconcile(){
 }
 
 function initAuth(){
-  initCloud();
   updateAccountUI();
   const token = getToken();
   if(token){
