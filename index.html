@@ -9,42 +9,47 @@
 <meta http-equiv="Expires" content="0">
 <style>
   :root{
-    --primary:#4f46e5; --primary-dark:#4338ca; --bg:#f5f6fa; --card:#fff;
-    --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; --green:#16a34a; --red:#dc2626; --amber:#d97706;
+    --primary:#0891b2; --primary-dark:#0e7490; --bg:#f0fdfa; --card:rgba(255,255,255,.58);
+    --text:#0f172a; --muted:#64748b; --border:rgba(255,255,255,.55); --green:#059669; --red:#ef4444; --amber:#f59e0b;
+    --glass:rgba(255,255,255,.58); --glass-strong:rgba(255,255,255,.85);
+    --shadow:0 2px 10px rgba(15,23,42,.06);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
-  .page{display:none;max-width:880px;margin:0 auto;padding:24px 20px 80px}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;color:var(--text);line-height:1.6;min-height:100vh;background:linear-gradient(140deg,#ccfbf1 0%,#e0f2fe 46%,#cffafe 100%);background-attachment:fixed}
+  body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(90px);z-index:-1;pointer-events:none}
+  body::before{width:480px;height:480px;background:rgba(6,182,212,.26);top:-120px;right:-120px}
+  body::after{width:420px;height:420px;background:rgba(20,184,166,.24);bottom:-140px;left:-120px}
+  .page{display:none;max-width:1080px;margin:0 auto;padding:24px 24px 80px}
   .page.active{display:block}
   /* 导航 */
-  .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
-  .logo{font-weight:700;font-size:18px;color:var(--primary)}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .logo{font-weight:700;font-size:18px;color:var(--text);letter-spacing:-.01em}
   .nav-actions{display:flex;gap:10px}
-  button{cursor:pointer;border:none;border-radius:8px;font-size:14px;padding:9px 16px;font-weight:500;transition:.15s}
-  .btn-primary{background:var(--primary);color:#fff}
-  .btn-primary:hover{background:var(--primary-dark)}
-  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
-  .btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+  button{cursor:pointer;border:none;border-radius:12px;font-size:15px;padding:9px 16px;font-weight:500;transition:.15s}
+  .btn-primary{background:linear-gradient(135deg,#06b6d4,#14b8a6);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.35)}
+  .btn-primary:hover{filter:brightness(1.08);box-shadow:0 6px 18px rgba(6,182,212,.45)}
+  .btn-ghost{background:rgba(255,255,255,.4);border:1px solid var(--border);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--primary);color:var(--primary);background:rgba(255,255,255,.65)}
   .btn-sm{padding:6px 12px;font-size:13px}
-  h1{font-size:22px;margin-bottom:8px}
-  .sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+  h1{font-size:26px;margin-bottom:8px;line-height:1.25;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:15px;margin-bottom:24px}
   /* 卡片 */
-  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
-  input[type=text]{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit}
-  input[type=text]:focus{outline:none;border-color:var(--primary)}
-  textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:14px;font-family:inherit;resize:vertical}
-  textarea:focus{outline:none;border-color:var(--primary)}
-  .label{font-size:14px;font-weight:600;margin:12px 0 6px}
-  .hint{font-size:12px;color:var(--muted);margin-top:4px}
-  .ga-group{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--card)}
+  .card{background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--border);border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.55)}
+  input[type=text]{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:15px;font-family:inherit;background:rgba(255,255,255,.6)}
+  input[type=text]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(6,182,212,.18)}
+  textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical;background:rgba(255,255,255,.6)}
+  textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(6,182,212,.18)}
+  .label{font-size:15px;font-weight:600;margin:12px 0 6px}
+  .hint{font-size:13px;color:var(--muted);margin-top:4px}
+  .ga-group{border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:12px;background:var(--card)}
   .ga-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
   .ga-name{flex:1;margin:0}
   .ga-row{display:flex;gap:8px;margin-bottom:6px}
   .ga-item{flex:1;margin:0}
   .ga-del{flex:0 0 auto;padding:6px 10px}
-  .iv-sel{flex:1;min-width:0;border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit;background:var(--card)}
+  .iv-sel{flex:1;min-width:0;border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:14px;font-family:inherit;background:rgba(255,255,255,.6)}
   .iv-sel:focus{outline:none;border-color:var(--primary)}
-  .iv-group{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--card)}
+  .iv-group{border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:12px;background:var(--card)}
   .iv-gname{margin:0 0 8px;font-size:14px;font-weight:600}
   .iv-item-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
   .iv-item-text{flex:1;font-size:13px;margin:0}
@@ -52,7 +57,7 @@
   .iv-chip{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;cursor:pointer;padding:0;font-family:inherit}
   .iv-chip:hover{border-color:var(--primary);color:var(--primary)}
   .iv-chip.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
-  .iv-chip.wide{width:auto;height:26px;border-radius:6px;padding:0 8px}
+  .iv-chip.wide{width:auto;height:26px;border-radius:8px;padding:0 8px}
   .iv-chip.wide.judge-y.on{background:var(--green);border-color:var(--green)}
   .iv-chip.wide.judge-n.on{background:var(--red);border-color:var(--red)}
   .iv-concl{display:flex;gap:8px;margin:0 0 12px}
@@ -60,74 +65,94 @@
   .iv-concl .on{background:var(--primary);border-color:var(--primary);color:#fff}
   .acc-head{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;padding:2px 0}
   .acc-arrow{color:var(--muted);font-size:12px;flex:0 0 auto;transition:transform .15s}
-  .acc-title{font-size:14px;font-weight:600;color:var(--text)}
+  .acc-title{font-size:15px;font-weight:700;color:var(--text)}
   .acc-actions{display:flex;gap:8px;align-items:center}
   .acc-body{display:none;margin-top:12px}
   .acc-body.open{display:block}
-  .acc-head:hover .acc-title{color:var(--primary)}
+  .acc-head:hover .acc-title{color:var(--acc,var(--primary))}
   .std-summary{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
-  .std-chip{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 8px}
+  .std-chip{font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 8px}
   .std-grp{margin-bottom:10px}
   .std-grp-name{font-size:13px;font-weight:600;margin:0 0 4px}
   .std-row{display:flex;align-items:flex-start;gap:6px;font-size:13px;margin-bottom:3px}
   .std-hit{color:var(--green);flex:0 0 auto}
   .std-miss{color:var(--red);flex:0 0 auto}
   .std-item{flex:1;min-width:0}
-  .std-note{color:var(--muted);font-size:12px}
+  .std-note{color:var(--muted);font-size:13px}
   /* 文件上传 */
-  .upload-zone{border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;cursor:pointer;color:var(--muted);transition:.15s;background:var(--card)}
+  .upload-zone{border:2px dashed var(--border);border-radius:16px;padding:18px;text-align:center;cursor:pointer;color:var(--muted);transition:.15s;background:var(--card)}
   .upload-zone:hover{border-color:var(--primary);color:var(--primary)}
-  .file-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;margin-top:8px;background:var(--card)}
+  .file-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:1px solid var(--border);border-radius:12px;margin-top:8px;background:var(--card)}
   .fc-name{font-weight:500;font-size:14px;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
   .fc-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .fc-status{font-size:12px;color:var(--muted);white-space:nowrap}
+  .fc-status{font-size:13px;color:var(--muted);white-space:nowrap}
   .fc-status.ok{color:var(--green)}
   .fc-status.err{color:var(--red)}
   /* 岗位卡片（工作台） */
-  .job-card{display:flex;align-items:center;justify-content:space-between;padding:16px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:var(--card);cursor:pointer;transition:.15s}
-  .job-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(79,70,229,.08)}
+  .job-card{display:flex;align-items:center;justify-content:space-between;padding:16px;border:1px solid var(--border);border-radius:16px;margin-bottom:10px;background:var(--card);cursor:pointer;transition:.15s}
+  .job-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(15,23,42,.08)}
   .job-name{font-weight:600;font-size:15px}
-  .job-meta{font-size:12px;color:var(--muted)}
+  .job-meta{font-size:13px;color:var(--muted)}
   .empty{text-align:center;color:var(--muted);padding:48px 0}
-  .guide-step{text-align:left;max-width:360px;margin:0 auto 10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text)}
-  .mode-bar{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+  .guide-step{text-align:left;max-width:360px;margin:0 auto 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text)}
+  .mode-bar{background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.4);color:#0e7490;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px}
   /* 历史批次 */
-  .task-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);cursor:pointer}
+  .task-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:14px;margin-bottom:8px;background:var(--card);cursor:pointer}
   .task-item:hover{border-color:var(--primary)}
   .task-info .t-name{font-weight:600;font-size:14px}
   .task-info .t-meta{font-size:12px;color:var(--muted)}
   /* 结果列表 */
   .result-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-  .cand-card{padding:14px 16px;border:1px solid var(--border);border-radius:12px;margin-bottom:12px;background:var(--card);cursor:pointer;transition:.15s}
-  .cand-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(79,70,229,.08)}
+  .cand-card{padding:16px;border:1px solid var(--border);border-radius:16px;margin-bottom:12px;background:var(--card);cursor:pointer;transition:.15s}
+  .cand-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(15,23,42,.08)}
   .judge-bar{display:flex;align-items:center;gap:12px;border-left:4px solid var(--border);padding-left:10px}
   .judge-score{font-weight:700;font-size:18px}
   .judge-name{font-weight:600;font-size:15px}
-  .judge-missing{font-size:12px;color:var(--red);margin-left:auto}
+  .judge-missing{font-size:13px;color:var(--red);margin-left:auto}
   .judge-comment{font-size:13px;color:var(--text);margin:8px 0 0 14px}
   .hard-req{margin:6px 0 0 14px}
-  .raw-preview{margin:10px 0 0 14px;padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:140px;overflow:hidden}
+  .raw-preview{margin:12px 0 0 16px;padding:12px;background:rgba(249,250,251,.6);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:140px;overflow:hidden}
   .raw-preview img{max-width:100%;max-height:120px;display:block;border-radius:6px}
-  .low-group{background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:12px 16px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer}
+  .low-group{background:var(--card);border:1px dashed var(--border);border-radius:14px;padding:12px 16px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer}
   /* 详情 */
   .detail-score{display:flex;align-items:center;gap:20px;margin-bottom:16px}
   .big-score{font-size:48px;font-weight:700;color:var(--primary)}
-  .gap-tag{display:inline-block;background:#fef2f2;color:var(--red);border-radius:6px;padding:3px 10px;font-size:13px;margin:3px 4px 3px 0}
-  .ok-tag{display:inline-block;background:#f0fdf4;color:var(--green);border-radius:6px;padding:3px 10px;font-size:13px;margin:3px 4px 3px 0}
-  .comment-box{background:#eef2ff;border-radius:10px;padding:14px;font-size:14px}
-  .resume-box{background:#f9fafb;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;max-height:400px;overflow:auto}
+  .gap-tag{display:inline-block;background:rgba(254,242,242,.7);color:var(--red);border-radius:8px;padding:3px 10px;font-size:13px;margin:3px 4px 3px 0}
+  .ok-tag{display:inline-block;background:rgba(240,253,244,.7);color:var(--green);border-radius:8px;padding:3px 10px;font-size:13px;margin:3px 4px 3px 0}
+  .comment-box{background:rgba(207,250,254,.72);border-radius:14px;padding:14px;font-size:14px}
+  .resume-box{background:rgba(249,250,251,.75);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:13px;white-space:pre-wrap;max-height:400px;overflow:auto}
   .loading{text-align:center;padding:40px;color:var(--primary)}
   .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
   @keyframes spin{to{transform:rotate(360deg)}}
   /* 弹窗 */
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
   .modal-bg.show{display:flex}
-  .modal{background:#fff;border-radius:14px;padding:24px;width:440px;max-width:92vw}
+  .modal{background:var(--glass-strong);-webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);border:1px solid var(--border);border-radius:20px;padding:24px;width:440px;max-width:92vw;box-shadow:var(--shadow)}
   .modal h3{margin-bottom:12px}
   .feedback-link{color:var(--primary);font-size:13px;text-decoration:none}
   .feedback-link:hover{text-decoration:underline}
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:200;opacity:0;transition:.3s}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(31,41,55,.92);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:200;opacity:0;transition:.3s;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
   .toast.show{opacity:1}
+  /* 玻璃质感通用（列表卡片/输入框/弹窗等） */
+  .job-card,.task-item,.cand-card,.low-group,.ga-group,.iv-group,.upload-zone,.modal,.comment-box,.resume-box{-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3)}
+  /* 岗位页板块配色（蓝→青→绿谱系） */
+  #acc-note{--acc:#0d9488}
+  .c-jd{--acc:#0369a1}
+  .c-analy{--acc:#0891b2}
+  #acc-interview{--acc:#059669}
+  .c-resume{--acc:#0ea5e9}
+  /* 岗位页双列横向布局：减少纵向下拉 */
+  @media(min-width:900px){
+    #page-job.active{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    #page-job.active > .card{margin-bottom:0}
+    #page-job.active > .btn-ghost,
+    #page-job.active > h1,
+    #page-job.active > .sub,
+    #page-job.active > .btn-primary,
+    #page-job.active > #history-label,
+    #page-job.active > #history-list,
+    #page-job.active > .c-resume{grid-column:1/-1}
+  }
   @media(max-width:640px){
     .page{padding:16px 12px 80px}
     .nav{padding:12px 14px;flex-wrap:wrap;gap:8px}
@@ -145,12 +170,12 @@
     .raw-preview img{max-height:200px}
   }
   .status-bar{display:flex;gap:6px;margin:8px 0 0 14px}
-  .status-badge{font-size:12px;padding:2px 8px;border-radius:4px;font-weight:500;margin-left:auto}
+  .status-badge{font-size:12px;padding:2px 8px;border-radius:6px;font-weight:500;margin-left:auto}
   .status-badge.push{background:#f0fdf4;color:var(--green)}
   .status-badge.pass{background:#fef2f2;color:var(--red)}
   .btn-red{background:transparent;border:1px solid var(--red);color:var(--red)}
   .btn-red:hover{background:var(--red);color:#fff}
-  .prev-appear{font-size:12px;color:var(--muted);margin:6px 0 0 14px;padding:4px 8px;background:#f3f4f6;border-radius:6px}
+  .prev-appear{font-size:13px;color:var(--muted);margin:6px 0 0 14px;padding:4px 8px;background:rgba(243,244,246,.7);border-radius:10px}
   .unread-dot{display:inline-block;width:8px;height:8px;background:var(--primary);border-radius:50%;margin-right:6px;flex-shrink:0}
   .cand-unread{border-left:3px solid var(--primary)}
   .job-card-select{cursor:default}
@@ -164,14 +189,13 @@
   <div class="nav-actions">
     <button class="btn-ghost btn-sm" id="nav-account-btn" onclick="onAccountClick()">登录</button>
     <button class="btn-ghost btn-sm" onclick="openSettings()">⚙ 设置</button>
-    <button class="btn-primary btn-sm" onclick="goNew()">+ 新建岗位</button>
-    <button class="btn-ghost btn-sm" onclick="showDebug()" style="opacity:.5">调试</button>
+    <button class="btn-primary btn-sm" onclick="goNew()">＋ 新建岗位</button>
   </div>
 </div>
 
 <!-- 页面1 工作台：岗位列表 -->
 <div class="page active" id="page-home">
-  <div style="background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;border-radius:14px;padding:20px;margin-bottom:20px">
+  <div style="background:linear-gradient(135deg,#0891b2,#14b8a6);color:#fff;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 8px 28px rgba(8,145,178,.22)">
     <div style="font-size:20px;font-weight:700;margin-bottom:6px">AI招聘助手</div>
     <div style="font-size:14px;opacity:.9">粘贴 JD 和简历，内置打分 + 一键复制推荐名单。支持 PDF / Word / 图片 / 文字，无需网络，打开即用。</div>
   </div>
@@ -211,9 +235,22 @@
   <h1 id="job-title" style="margin-bottom:2px">岗位</h1>
   <div class="sub" id="job-date" style="margin-bottom:16px"></div>
 
-  <div class="card acc">
+  <div class="card acc" id="acc-note">
     <div class="acc-head" onclick="toggleCard(this)">
-      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">岗位 JD</span></span>
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">📌 岗位备注</span></span>
+      <span class="acc-actions" onclick="event.stopPropagation()">
+        <button class="btn-primary btn-sm" onclick="saveJobNote()">保存</button>
+      </span>
+    </div>
+    <div class="acc-body">
+      <textarea id="job-note" placeholder="记下记不住的事：面试官是谁、岗位在哪个业务线、内部注意事项、候选人跟进提醒…" oninput="onJobNoteInput()"></textarea>
+      <div class="hint" style="margin:0">自动保存到本机并随账号同步到云端 <span id="note-saved" style="color:var(--green);opacity:0;transition:opacity .3s">✓ 已保存</span></div>
+    </div>
+  </div>
+
+  <div class="card acc c-jd">
+    <div class="acc-head" onclick="toggleCard(this)">
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">📋 岗位 JD</span></span>
       <span class="acc-actions" onclick="event.stopPropagation()">
         <button class="btn-ghost btn-sm" onclick="toggleEditJd()">编辑</button>
       </span>
@@ -230,9 +267,9 @@
     </div>
   </div>
 
-  <div class="card acc">
+  <div class="card acc c-analy">
     <div class="acc-head" onclick="toggleCard(this)">
-      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">JD 能力拆解</span></span>
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">🧩 JD 能力拆解</span></span>
       <span class="acc-actions" onclick="event.stopPropagation()">
         <button class="btn-ghost btn-sm" onclick="aiAnalyzeJd()">AI 拆解</button>
         <button class="btn-primary btn-sm" onclick="saveJdAnalysis()">保存</button>
@@ -247,7 +284,7 @@
 
   <div class="card acc" id="acc-interview">
     <div class="acc-head" onclick="toggleCard(this)">
-      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">面试评估</span></span>
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">🎤 面试评估</span></span>
       <span class="acc-actions" onclick="event.stopPropagation()">
         <button class="btn-ghost btn-sm" onclick="aiSummarizeIv()">AI 汇总</button>
         <button class="btn-primary btn-sm" onclick="saveInterview()">保存</button>
@@ -265,9 +302,9 @@
     </div>
   </div>
 
-  <div class="card acc">
+  <div class="card acc c-resume">
     <div class="acc-head" onclick="toggleCard(this)">
-      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">粘贴简历（Ctrl+V 直接粘贴文字或截图）</span></span>
+      <span style="display:flex;align-items:center;gap:8px"><span class="acc-arrow">▸</span><span class="acc-title">📎 粘贴简历（Ctrl+V 直接粘贴文字或截图）</span></span>
     </div>
     <div class="acc-body">
       <textarea id="resume-input" placeholder="直接 Ctrl+V 粘贴简历文字或截图；多份文字用一行 ===== 分隔"></textarea>
@@ -359,6 +396,7 @@
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(this.files)">
     <div class="hint" style="margin:0 0 12px">🔒 简历只存本机浏览器，不联网不上传；仅在设置里配置了代理/Key 时，简历文字才会发给 DeepSeek 用于打分。默认演示模式所有数据不出本机。</div>
     <a class="feedback-link" href="https://github.com/shiraishigm0120-commits/ai-recruiter-assistant/issues/new" target="_blank">💬 反馈问题 / 提建议</a>
+    <a class="feedback-link" href="javascript:void(0)" onclick="closeSettings();showDebug()" style="margin-left:12px;opacity:.55">调试</a>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn-primary" style="flex:1" onclick="saveSettings()">保存</button>
       <button class="btn-ghost" onclick="closeSettings()">取消</button>
@@ -456,10 +494,11 @@ function showPage(name){
   $('page-'+name).classList.add('active');
   window.scrollTo(0,0);
 }
-function goHome(){ renderJobs(); showPage('home'); }
+function goHome(){ flushJobNote(); renderJobs(); showPage('home'); }
 function goNew(){ showPage('new'); }
 function goResults(){ renderResults(); showPage('results'); }
 function goBackToJob(){
+  flushJobNote();
   if(state.currentJobId) openJob(state.currentJobId);
   else goHome();
 }
@@ -537,6 +576,7 @@ function renderJobs(){
       const metaDiv = document.createElement('div');
       metaDiv.className = 'job-meta';
       metaDiv.textContent = fmtDate(j.createdAt) + ' 创建 · ' + n + ' 次筛选';
+      if(j.note && String(j.note).trim()) metaDiv.textContent += ' · 📝 有备注';
       info.appendChild(nameDiv);
       info.appendChild(metaDiv);
       card.appendChild(info);
@@ -622,7 +662,7 @@ function createJob(){
   const jd = $('job-jd').value.trim();
   if(!name){ toast('请填写岗位名称'); return; }
   if(!jd){ toast('请粘贴岗位 JD'); return; }
-  const job = { id:uid(), name, jd, createdAt:Date.now(), batches:[] };
+  const job = { id:uid(), name, jd, note:'', createdAt:Date.now(), batches:[] };
   const jobs = loadJobs();
   jobs.unshift(job);
   saveJobs(jobs);
@@ -652,6 +692,10 @@ function openJob(id){
   $('job-title').textContent = job.name;
   $('job-date').textContent = '创建于 '+fmtDate(job.createdAt);
   $('job-jd-view').textContent = job.jd;
+  const noteBox = $('job-note');
+  if(noteBox) noteBox.value = job.note || '';
+  const noteCard = $('acc-note');
+  if(noteCard) openCard(noteCard);
   toggleEditJd(false);
   renderHistory(job);
   renderJdAnalysis(job);
@@ -678,6 +722,35 @@ function saveJd(){
   $('job-jd-view').textContent = jd;
   toggleEditJd(false);
   toast('JD 已更新');
+}
+
+/* ===== 岗位备注 ===== */
+let noteTimer = null;
+function onJobNoteInput(){
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(()=>saveJobNote(true), 600);
+}
+function saveJobNote(silent){
+  const job = curJob();
+  if(!job) return;
+  const box = $('job-note');
+  if(box) job.note = box.value;
+  persistJob(job);
+  const ind = $('note-saved');
+  if(ind){
+    ind.style.opacity = '1';
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(()=>{ ind.style.opacity = '0'; }, 1500);
+  }
+  if(!silent) toast('备注已保存');
+}
+function flushJobNote(){
+  const box = $('job-note');
+  if(!box || box.value === '') return;
+  const job = curJob();
+  if(!job || (job.note||'') === box.value) return;
+  job.note = box.value;
+  persistJob(job);
 }
 
 /* ===== JD 能力拆解 ===== */
@@ -1171,6 +1244,7 @@ async function extractTextByType(file){
 
 /* ===== 开始匹配 ===== */
 async function startMatch(){
+  flushJobNote();
   const job = getJob(state.currentJobId);
   if(!job){ toast('岗位不存在'); return; }
   const pastedText = $('resume-input').value.trim();
