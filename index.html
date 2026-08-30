@@ -260,7 +260,7 @@
         <button id="iv-del-btn" class="btn-ghost btn-sm" onclick="delInterview()" style="margin-left:auto">删除</button>
       </div>
       <div id="iv-form">
-        <div class="hint" style="margin:0">点击「＋ 新建评估」记录面试打分，评估表会自动按 JD 能力拆解的三组标准生成</div>
+        <div class="hint" style="margin:0">点击「＋ 新建评估」记录面试打分，评估表会自动按 JD 能力拆解生成</div>
       </div>
     </div>
   </div>
@@ -686,7 +686,7 @@ async function analyzeJdApi(jd){
   const enc = localStorage.getItem('deepseek_key_enc');
   const key = enc ? atob(enc) : (localStorage.getItem('deepseek_key')||'');
   if(!key) return null;
-  const prompt = '把这份岗位JD拆解成该岗位任职所需的能力清单，且只能拆成3个分组，分组名固定为：硬性标准、软性标准、判断标准。\n硬性标准：学历、工作年限、专业技能、工具掌握、证书等硬条件。\n软性标准：沟通表达、团队协作、抗压、责任心等软素质。\n判断标准：衡量候选人是否达标的具体观察点或判断依据（比如"能否举例说明自己用某工具完成过什么"）。\n每个能力用一句简洁短语描述，要具体、可判断（比如"熟练使用Excel数据透视表"而不是"会用Excel"）。\n\n【JD】\n'+jd+'\n\n只返回JSON，不要任何其他文字，格式：{"groups":[{"name":"分组名","items":["能力1","能力2"]}]}，必须用这3个固定分组名，每组2~6项。';
+  const prompt = '把这份岗位JD拆解成该岗位任职所需的4个分组，分组名固定为：硬性准入条件、核心业务能力、综合软素质、判断条件。\n硬性准入条件：学历、工作年限、专业技能、工具掌握、证书等一票否决的硬性门槛（不满足直接淘汰）。\n核心业务能力：该岗位日常核心工作所需的具体业务能力（如数据分析、活动策划、用户运营）。\n综合软素质：沟通表达、团队协作、抗压、责任心等软素质。\n判断条件：综合以上三方面，给出衡量候选人是否达标的判断依据（如"硬性条件全部满足，且核心业务能力至少命中2项，软素质无明显短板"）。\n每个能力用一句简洁短语描述，要具体、可判断（比如"熟练使用Excel数据透视表"而不是"会用Excel"）。\n\n【JD】\n'+jd+'\n\n只返回JSON，不要任何其他文字，格式：{"groups":[{"name":"分组名","items":["能力1","能力2"]}]}，必须用这4个固定分组名，每组2~6项。';
   const payload = {
     model:'deepseek-chat',
     messages:[
@@ -714,7 +714,14 @@ async function analyzeJdApi(jd){
   return groups.filter(g=>g && g.name).map(g=>({ name:String(g.name), items:(g.items||[]).map(String).filter(Boolean) }));
 }
 function localAnalyze(jd){
-  return [{ name:'能力要求', items: extractKeywords(jd) }];
+  const kw = extractKeywords(jd);
+  const third = Math.max(1, Math.ceil(kw.length/3));
+  return [
+    { name:'硬性准入条件', items: kw.slice(0, third) },
+    { name:'核心业务能力', items: kw.slice(third, third*2) },
+    { name:'综合软素质', items: kw.slice(third*2, third*3) },
+    { name:'判断条件', items: ['硬性条件全部满足，且核心业务能力命中一半以上'] }
+  ];
 }
 async function aiAnalyzeJd(){
   const job = curJob();
@@ -739,17 +746,16 @@ function renderJdAnalysis(job){
   if(!box) return;
   const groups = (job.jdAnalysis && job.jdAnalysis.groups) || [];
   if(!groups.length){
-    box.innerHTML = '<div class="hint" style="margin:0">点击「AI 拆解」从岗位 JD 生成能力清单，生成后可自由编辑</div>';
+    box.innerHTML = '<div class="hint" style="margin:0">点击「AI 拆解」从岗位 JD 生成：硬性准入条件 / 核心业务能力 / 综合软素质，并综合给出判断条件，生成后可自由编辑</div>';
     return;
   }
-  box.innerHTML = '<div class="ga-groups">'+groups.map(g=>'<div class="ga-group">'+
-    '<div class="ga-head"><input class="ga-name" value="'+escapeHtml(g.name)+'" placeholder="分组名">'+
-    '<button class="btn-ghost btn-sm" onclick="delJdGroup(this)">删除分组</button></div>'+
+  box.innerHTML = groups.map(g=>'<div class="ga-group">'+
+    '<div class="ga-head"><span class="ga-name" style="border:none;background:transparent;padding:0;font-weight:600">'+escapeHtml(g.name)+'</span>'+
+    '<button class="btn-ghost btn-sm" onclick="clearJdGroup(this)" title="清空该分组">清空</button></div>'+
     '<div class="ga-items">'+(g.items||[]).map(it=>'<div class="ga-row">'+
       '<input class="ga-item" value="'+escapeHtml(it)+'" placeholder="能力项">'+
       '<button class="btn-ghost btn-sm ga-del" onclick="delJdItem(this)">×</button></div>').join('')+'</div>'+
-    '<button class="btn-ghost btn-sm" onclick="addJdItem(this)">＋ 添加能力</button></div>').join('')+'</div>'+
-    '<div style="margin-top:12px"><button class="btn-ghost btn-sm" onclick="addJdGroup()">＋ 添加分组</button></div>';
+    '<button class="btn-ghost btn-sm" onclick="addJdItem(this)">＋ 添加能力</button></div>').join('');
 }
 function addJdItem(btn){
   const gEl = btn.closest('.ga-group');
@@ -760,24 +766,16 @@ function addJdItem(btn){
   gEl.querySelector('.ga-items').appendChild(row);
 }
 function delJdItem(btn){ btn.closest('.ga-row').remove(); }
-function delJdGroup(btn){ btn.closest('.ga-group').remove(); }
-function addJdGroup(){
-  const g = document.createElement('div');
-  g.className = 'ga-group';
-  g.innerHTML = '<div class="ga-head"><input class="ga-name" placeholder="分组名">'+
-    '<button class="btn-ghost btn-sm" onclick="delJdGroup(this)">删除分组</button></div>'+
-    '<div class="ga-items"></div>'+
-    '<button class="btn-ghost btn-sm" onclick="addJdItem(this)">＋ 添加能力</button>';
-  $('jd-analysis').querySelector('.ga-groups').appendChild(g);
-}
+function clearJdGroup(btn){ btn.closest('.ga-group').querySelector('.ga-items').innerHTML=''; }
 function saveJdAnalysis(){
   const job = curJob();
   if(!job) return;
   const box = $('jd-analysis');
-  const groups = [...box.querySelectorAll('.ga-group')].map((gEl,gi)=>{
-    const name = (gEl.querySelector('.ga-name').value||'').trim();
+  const groups = [...box.querySelectorAll('.ga-group')].map(gEl=>{
+    const nameEl = gEl.querySelector('.ga-name');
+    const name = ((nameEl && (nameEl.value || nameEl.textContent)) || '').trim() || '能力要求';
     const items = [...gEl.querySelectorAll('.ga-item')].map(i=>i.value.trim()).filter(Boolean);
-    return { name: name||('分组'+(gi+1)), items };
+    return { name, items };
   }).filter(g=>g.items.length);
   if(!groups.length){ toast('还没有内容可保存'); return; }
   job.jdAnalysis = { groups };
@@ -806,7 +804,7 @@ function renderInterviews(job){
   bar.style.display='flex';
   if(!list.length){
     ivDraft=null;
-    form.innerHTML = '<div class="hint" style="margin:0">点击「＋ 新建评估」记录面试打分，评估表会自动按 JD 能力拆解的三组标准生成</div>';
+    form.innerHTML = '<div class="hint" style="margin:0">点击「＋ 新建评估」记录面试打分，评估表会自动按 JD 能力拆解生成</div>';
     return;
   }
   if(!list.find(i=>i.id===state.currentIvId)) state.currentIvId = (list.find(i=>i.id===job.ivActive)||list[0]).id;
@@ -871,7 +869,7 @@ function switchInterview(){
 function newInterview(){
   const job = curJob(); if(!job) return;
   const analysis = job.jdAnalysis && job.jdAnalysis.groups;
-  if(!analysis || !analysis.length){ toast('先做 JD 能力拆解，评估表会按拆出的三组标准生成'); return; }
+  if(!analysis || !analysis.length){ toast('先做 JD 能力拆解，评估表会按拆出的标准生成'); return; }
   const groups = analysis.map(g=>({ name:g.name, items:(g.items||[]).map(t=>({ t:String(t), score:0, judge:/判断/.test(g.name) })) }));
   const iv = { id:Date.now(), name:'', date:fmtDate(Date.now()), conclusion:'', note:'', ai:'', groups };
   if(!job.interviews) job.interviews=[];
@@ -975,7 +973,7 @@ async function summarizeIvApi(groups, iv){
     }
     return line;
   }).join('\n');
-  const prompt = '你是资深面试官。以下是一份岗位面试评估记录（硬性/软性标准评分1~5，0=未评；判断标准为有证据/无证据）：\n候选人：'+iv.name+'\n'+lines+'\n面试结论：'+(iv.conclusion||'未选')+'\n备注：'+(iv.note||'无')+'\n\n请输出面试汇总，包括：1) 综合评语（3~4句，具体到各标准的实际表现，别只说"表现不错"这种空话）2) 亮点与风险点 3) 明确建议：通过 / 待定 / 不通过，并给一句话理由。';
+  const prompt = '你是资深面试官。以下是一份岗位面试评估记录（硬性准入条件/核心业务能力/综合软素质评分1~5，0=未评；判断条件为有证据/无证据）：\n候选人：'+iv.name+'\n'+lines+'\n面试结论：'+(iv.conclusion||'未选')+'\n备注：'+(iv.note||'无')+'\n\n请输出面试汇总，包括：1) 综合评语（3~4句，具体到各标准的实际表现，别只说"表现不错"这种空话）2) 亮点与风险点 3) 明确建议：通过 / 待定 / 不通过，并给一句话理由。';
   const payload = { model:'deepseek-chat', messages:[{role:'system',content:'你是资深招聘顾问，点评要具体、客观、可直接采用。'},{role:'user',content:prompt}], temperature:0.4 };
   const controller=new AbortController(); const t=setTimeout(()=>controller.abort(),30000);
   const resp=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getDeepSeekKey()},body:JSON.stringify(payload),signal:controller.signal});
@@ -1211,6 +1209,7 @@ async function startMatch(){
       covered: r.covered||[],
       missing: r.missing||[],
       hard: r.hard||[],
+      core: r.core||[],
       soft: r.soft||[],
       judge: r.judge||[],
       comment: r.comment||'暂无点评',
@@ -1230,7 +1229,7 @@ async function startMatch(){
     id:uid(), createdAt:Date.now(), mode: mode,
     results: state.results.map(r=>({
       name: r.name, score: r.score, covered: r.covered, missing: r.missing,
-      hard: r.hard||[], soft: r.soft||[], judge: r.judge||[],
+      hard: r.hard||[], core: r.core||[], soft: r.soft||[], judge: r.judge||[],
       comment: r.comment, evidence: r.evidence||'', status: r.status||'', viewed: r.viewed===false?false:true, hardReq: r.hardReq||[],
       candidateId: r.candidateId||'',
       text: (r.text||'').slice(0,2000), fileType: r.fileType
@@ -1262,7 +1261,7 @@ function updateModeBar(){
   const bar = $('mode-bar');
   if(state.mode === '演示'){
     bar.style.display = 'block';
-    bar.innerHTML = '⚠️ 演示模式：内置关键词短语匹配，分数仅供参考、可能误判，勿直接作为筛选依据。可在「设置」中配置 DeepSeek API 获取基于三组标准的 AI 打分。';
+    bar.innerHTML = '⚠️ 演示模式：内置关键词短语匹配，分数仅供参考、可能误判，勿直接作为筛选依据。可在「设置」中配置 DeepSeek API 获取基于四部分标准的 AI 打分。';
   } else {
     bar.style.display = 'none';
     bar.innerHTML = '';
@@ -1362,9 +1361,10 @@ function hardReqRow(r){
 }
 function stdGroups(r){
   return [
-    { name:'硬性标准', rows:r.hard },
-    { name:'软性标准', rows:r.soft },
-    { name:'判断标准', rows:r.judge }
+    { name:'硬性准入条件', rows:r.hard },
+    { name:'核心业务能力', rows:r.core },
+    { name:'综合软素质', rows:r.soft },
+    { name:'判断条件', rows:r.judge }
   ].filter(g=>g.rows && g.rows.length);
 }
 function stdSummary(r){
@@ -1570,9 +1570,9 @@ function buildPrompt(jd, resumes, standards){
     }).filter(Boolean).join('\n\n')+'\n\n';
   }
   return '你是资深招聘顾问，请评估候选人与岗位的匹配度。\n\n【岗位JD】\n'+jd+'\n\n'+stdPart+'【候选人简历】\n'+resumeBlock+'\n\n'
-    +'请返回JSON对象，格式：{"results":[{"name":"姓名","score":0,"hard":[{"item":"硬性标准原文","hit":true,"note":"依据"}],"soft":[{"item":"软性标准原文","hit":true,"note":"依据"}],"judge":[{"item":"判断标准原文","hit":true}],"covered":["已具备技能"],"missing":["缺失技能"],"evidence":"凭简历原文能证明的经验/项目","comment":"一句话中文点评"}]}\n'
+    +'请返回JSON对象，格式：{"results":[{"name":"姓名","score":0,"hard":[{"item":"硬性准入条件原文","hit":true,"note":"依据"}],"core":[{"item":"核心业务能力原文","hit":true,"note":"依据"}],"soft":[{"item":"综合软素质原文","hit":true,"note":"依据"}],"judge":[{"item":"判断条件原文","hit":true}],"covered":["已具备技能"],"missing":["缺失技能"],"evidence":"凭简历原文能证明的经验/项目","comment":"一句话中文点评"}]}\n'
     +'评分规则：\n'
-    +'1. 若提供了【评价标准】，hard/soft/judge 必须逐项对照每一条标准：硬性标准 hit=简历是否满足；软性标准 hit=简历有无相关线索；判断标准 hit=简历有无证据支撑。note 只能引用简历原文，找不到就写"未提及"，禁止推测。\n'
+    +'1. 若提供了【评价标准】，hard/core/soft/judge 必须逐项对照每一条标准：硬性准入条件 hit=简历是否满足；核心业务能力 hit=简历有无相关经验/技能；综合软素质 hit=简历有无相关线索；判断条件 hit=简历有无证据支撑。note 只能引用简历原文，找不到就写"未提及"，禁止推测。\n'
     +'2. score 是综合分（0-100），必须能被 hard/soft/judge 的命中情况解释。\n'
     +'3. evidence 只能写简历原文里真实存在的信息，简历没写的一律写空字符串，不推测、不补全、不编造。\n'
     +'4. comment 要口语化、像HR说的话，具体到简历实际内容，不要空话。';
@@ -1622,31 +1622,34 @@ function mockScore(resume, jdText, jdAnalysis){
   if(hasProject) comment += '，有项目经历';
   if(!comment) comment = '简历内容较少，建议补充';
   comment += '，仅供参考。';
-  // 三组标准逐项对照（演示模式粗略短语匹配）
-  const hard=[], soft=[], judge=[];
+  // 四组标准逐项对照（演示模式粗略短语匹配）
+  const hard=[], core=[], soft=[], judge=[];
   const groups = jdAnalysis && jdAnalysis.groups;
   if(groups){
     groups.forEach(g=>{
       const name = g.name||'';
+      const isJudge = /判断/.test(name);
       const isSoft = /软/.test(name);
+      const isHard = /硬|门槛|准入/.test(name);
       const items = (g.items||[]).map(it=>typeof it==='string'?it:it.t).filter(Boolean);
       const rows = items.map(it=>{
         let hit;
         if(isSoft){
-          // 软性标准措辞差异大，取核心词（去后缀）做宽松子串匹配
-          const core = String(it).replace(/能力|素质|意识|精神|态度|水平/g,'').slice(0,2);
-          hit = !!core && content.includes(core);
+          // 软素质措辞差异大，取核心词（去后缀）做宽松子串匹配
+          const coreWord = String(it).replace(/能力|素质|意识|精神|态度|水平/g,'').slice(0,2);
+          hit = !!coreWord && content.includes(coreWord);
         } else {
           hit = content.includes(it);
         }
         return { item: it, hit, note: hit?'简历提及':'未提及' };
       });
-      if(/硬/.test(name)) hard.push(...rows);
+      if(isJudge) judge.push(...rows);
+      else if(isHard) hard.push(...rows);
       else if(isSoft) soft.push(...rows);
-      else if(/判断/.test(name)) judge.push(...rows);
+      else core.push(...rows);
     });
   }
-  return { name: resume.name, score, covered, missing, evidence, comment, hard, soft, judge };
+  return { name: resume.name, score, covered, missing, evidence, comment, hard, core, soft, judge };
 }
 
 /* ===== JD 硬条件对照（学历/年限/技能，独立于 AI 的可解释清单） ===== */
