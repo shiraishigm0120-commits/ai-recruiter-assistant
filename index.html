@@ -1311,7 +1311,6 @@ async function startMatch(){
   };
   job.batches = job.batches || [];
   job.batches.push(batch);
-  job.batches = job.batches.slice(-3);
   const jobs = loadJobs();
   const idx = jobs.findIndex(j=>j.id===job.id);
   if(idx>=0){ jobs[idx] = job; saveJobs(jobs); }
