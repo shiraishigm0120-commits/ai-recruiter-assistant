@@ -187,6 +187,7 @@
 <div class="nav">
   <div class="logo">AI招聘助手 <span style="font-size:11px;color:var(--muted);font-weight:400">v2.1</span></div>
   <div class="nav-actions">
+    <span id="nav-sync-status" style="font-size:12px;color:var(--muted);margin-right:4px"></span>
     <button class="btn-ghost btn-sm" id="nav-account-btn" onclick="onAccountClick()">登录</button>
     <button class="btn-ghost btn-sm" onclick="openSettings()">⚙ 设置</button>
     <button class="btn-primary btn-sm" onclick="goNew()">＋ 新建岗位</button>
@@ -1820,6 +1821,7 @@ function updateAccountUI(){
   if(btn) btn.textContent = u ? ('👤 '+u) : '登录';
   const acc = $('account-user');
   if(acc) acc.textContent = u ? ('已登录：'+u) : '未登录';
+  if(!u) setSyncStatus('');
 }
 
 async function doLogin(){
@@ -1890,6 +1892,15 @@ async function doLogout(){
 
 function jobsUpdatedAt(){ return parseInt(localStorage.getItem('jobs_updated_at')||'0', 10)||0; }
 
+let syncRetry = 0;
+
+function setSyncStatus(msg, isError){
+  const st = $('nav-sync-status');
+  if(!st) return;
+  st.textContent = msg || '';
+  st.style.color = isError ? '#dc2626' : 'var(--muted)';
+}
+
 function debouncedSyncPush(){
   if(!isLoggedIn()) return;
   if(syncTimer) clearTimeout(syncTimer);
@@ -1901,7 +1912,19 @@ async function syncPush(){
   if(!token) return;
   try{
     await callUser('push', { token, jobs: loadJobs(), updatedAt: jobsUpdatedAt() });
-  }catch(e){ /* 静默失败，下次再推 */ }
+    syncRetry = 0;
+    setSyncStatus('已同步');
+  }catch(e){
+    console.error('[syncPush] 失败', e);
+    syncRetry++;
+    if(syncRetry <= 5){
+      setSyncStatus('同步失败，重试中…', true);
+      if(syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(syncPush, 15000);
+    } else {
+      setSyncStatus('同步失败，请检查网络', true);
+    }
+  }
 }
 
 async function syncReconcile(){
@@ -1920,16 +1943,18 @@ async function syncReconcile(){
       localStorage.setItem('jobs', JSON.stringify(cloudJobs));
       localStorage.setItem('jobs_updated_at', String(cloudAt));
       renderJobs();
+      setSyncStatus('已同步');
     } else if(cloudJobs.length > 0 && localJobs.length > 0){
       if(cloudAt > localAt){
         localStorage.setItem('jobs', JSON.stringify(cloudJobs));
         localStorage.setItem('jobs_updated_at', String(cloudAt));
         renderJobs();
+        setSyncStatus('已同步');
       } else {
         await syncPush();
       }
     }
-  }catch(e){ /* 静默失败 */ }
+  }catch(e){ console.error('[syncReconcile] 失败', e); setSyncStatus('同步失败，请检查网络', true); }
 }
 
 function initAuth(){
@@ -1949,6 +1974,16 @@ function initAuth(){
     showLogin();
   }
 }
+
+window.addEventListener('pagehide', function(){
+  if(!isLoggedIn()) return;
+  fetch(CLOUD_FN_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ action:'push', token:getToken(), jobs:loadJobs(), updatedAt:jobsUpdatedAt() }),
+    keepalive: true
+  }).catch(()=>{});
+});
 
 trackVisit();
 renderJobs();
