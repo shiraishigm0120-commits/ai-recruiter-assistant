@@ -1934,7 +1934,7 @@ async function syncPush(){
       if(syncTimer) clearTimeout(syncTimer);
       syncTimer = setTimeout(syncPush, 15000);
     } else {
-      setSyncStatus('同步失败，请检查网络', true);
+      setSyncStatus('同步失败：'+errText(e), true);
     }
   }
 }
@@ -1966,7 +1966,7 @@ async function syncReconcile(){
         await syncPush();
       }
     }
-  }catch(e){ console.error('[syncReconcile] 失败', e); setSyncStatus('同步失败，请检查网络', true); }
+  }catch(e){ console.error('[syncReconcile] 失败', e); setSyncStatus('同步失败：'+errText(e), true); }
 }
 
 function initAuth(){
