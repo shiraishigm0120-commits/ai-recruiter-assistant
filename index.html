@@ -1811,11 +1811,38 @@ function errText(e){
   return e.errMsg || e.message || e.error || e.error_description || (e.code ? ('错误码 '+e.code) : JSON.stringify(e));
 }
 
+function bytesToBase64(buf){
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const chunk = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  }
+  return btoa(binary);
+}
+
+async function gzipBytes(str){
+  if(typeof CompressionStream === 'undefined') return null;
+  try{
+    const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
+    return await new Response(stream).arrayBuffer();
+  }catch(e){ return null; }
+}
+
 async function callUser(action, payload){
+  const full = Object.assign({ action }, payload||{});
+  let bodyStr = JSON.stringify(full);
+  // 大请求体 gzip+base64 后放进 _z，绕开云接入 ~128KB 的请求体上限
+  if(bodyStr.length > 10240){
+    const gz = await gzipBytes(bodyStr);
+    if(gz){
+      bodyStr = JSON.stringify({ action, _z: bytesToBase64(gz) });
+    }
+  }
   const res = await fetch(CLOUD_FN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({ action }, payload||{}))
+    body: bodyStr
   });
   if(!res.ok) throw new Error('HTTP '+res.status);
   const data = await res.json();

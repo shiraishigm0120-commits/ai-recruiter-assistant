@@ -1,5 +1,6 @@
 const cloud = require('@cloudbase/node-sdk');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const app = cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 
@@ -118,17 +119,38 @@ async function handle(action, input) {
   }
 }
 
+function gunzipOrNull(buf) {
+  try { return zlib.gunzipSync(buf); } catch (e) { return null; }
+}
+
+// 解析云接入 HTTP 请求体：普通 JSON 字符串（前端把大请求 gzip+base64 后放进 _z 字段）
+function parseBody(event) {
+  const body = event.body;
+  if (body == null) return event;
+  if (Buffer.isBuffer(body)) {
+    try { return JSON.parse(body.toString('utf8')); } catch (e) { return {}; }
+  }
+  if (typeof body === 'string') {
+    try { return JSON.parse(body); } catch (e) { return {}; }
+  }
+  return event;
+}
+
+// 若带 _z 字段，还原出真正的入参（base64 解码 + gunzip）
+function unwrap(input) {
+  if (input && typeof input._z === 'string') {
+    try {
+      const raw = zlib.gunzipSync(Buffer.from(input._z, 'base64')).toString('utf8');
+      return JSON.parse(raw) || input;
+    } catch (e) { return input; }
+  }
+  return input;
+}
+
 exports.main = async (event) => {
   event = event || {};
   // 云接入 HTTP：body 是 JSON 字符串；fn invoke：event 直接是入参对象
-  let input = event;
-  if (typeof event.body === 'string') {
-    try {
-      input = JSON.parse(event.body) || {};
-    } catch (e) {
-      input = {};
-    }
-  }
+  const input = unwrap(parseBody(event));
 
   const result = await handle(input.action, input);
 
